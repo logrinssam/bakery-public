@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { PlayerStats, ShopType, MathQuestion, Stage, Equipment, QuestionCategory } from './types';
 import { STAGES, generateQuestionsForStage } from './data/stages';
-import { UPGRADE_ITEMS } from './data/equipment';
+import { UPGRADE_ITEMS, getActiveGoldMultiplierBoost } from './data/equipment';
 import { PixelSprite, BREADS_METADATA } from './components/PixelSprite';
 import { MathQuestionBox } from './components/MathQuestionBox';
 import { CabinetScreen } from './components/CabinetScreen';
@@ -173,10 +173,7 @@ export default function App() {
       const stage = STAGES.find(s => s.id === activeStageId)!;
       const baseGold = Math.round(50 * (stage.goldMultiplier || 1.0));
       
-      // Calculate equipment passive coefficient boost sum
-      const sumEquipmentBoost = UPGRADE_ITEMS
-        .filter(e => stats.purchasedEquipmentIds.includes(e.id))
-        .reduce((sum, e) => sum + e.multiplierBoost, 0);
+      const sumEquipmentBoost = getActiveGoldMultiplierBoost(stats.purchasedEquipmentIds);
 
       // VIP custom double chance 3x bonus multiplier
       const isVipCustomer = activeMascot && activeMascot.isVip;
@@ -832,7 +829,7 @@ export default function App() {
                       <Sparkles className="w-4 h-4 text-amber-500 animate-spin" style={{ animationDuration: '3s' }} />
                       <span>기구 골드 보너스: </span>
                       <span className="font-mono font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-lg">
-                        +{Math.round(UPGRADE_ITEMS.filter(e => stats.purchasedEquipmentIds.includes(e.id)).reduce((sum, e) => sum + e.multiplierBoost, 0) * 100)}%
+                        +{Math.round(getActiveGoldMultiplierBoost(stats.purchasedEquipmentIds) * 100)}%
                       </span>
                     </div>
                   </div>

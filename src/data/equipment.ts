@@ -231,3 +231,22 @@ export const UPGRADE_ITEMS: Equipment[] = [
     spriteIndex: 20
   }
 ];
+
+/** Gold bonus: highest multiplierBoost per category among owned items (special effects use separate checks). */
+export function getActiveGoldMultiplierBoost(purchasedIds: number[]): number {
+  const bestByCategory = new Map<Equipment['category'], number>();
+
+  for (const item of UPGRADE_ITEMS) {
+    if (!purchasedIds.includes(item.id)) continue;
+    const current = bestByCategory.get(item.category) ?? 0;
+    if (item.multiplierBoost > current) {
+      bestByCategory.set(item.category, item.multiplierBoost);
+    }
+  }
+
+  let sum = 0;
+  for (const boost of bestByCategory.values()) {
+    sum += boost;
+  }
+  return sum;
+}

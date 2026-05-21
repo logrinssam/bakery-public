@@ -34,7 +34,7 @@ export const CabinetScreen: React.FC<CabinetScreenProps> = ({
           </button>
           <div>
             <h1 className="font-display font-black text-[#5D4037] text-2xl md:text-3xl tracking-tight">🛠️ 베이커리 연구 아카데미</h1>
-            <p className="font-sans text-xs text-stone-500 font-medium mt-1">골드를 연구 도구에 투자해 수학 퀴즈 계산 시 추가 골드 버프를 얻으세요!</p>
+            <p className="font-sans text-xs text-stone-500 font-medium mt-1">같은 종류 장비는 최고급 1개만 골드 보너스에 적용됩니다. 특수 효과(힌트·콤보 보호)는 보유한 장비마다 따로 작동해요!</p>
           </div>
         </div>
 
