@@ -1,0 +1,6 @@
+{
+  "name": "Pixel Bakery",
+  "description": "초등학교 6학년 수학의 '비와 비율', '백분율' 단원을 완벽하게 학습할 수 있는 픽셀 아트 스타일의 교육용 베이커리 타이쿤 게임입니다.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
