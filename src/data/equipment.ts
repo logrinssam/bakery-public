@@ -88,7 +88,7 @@ export const UPGRADE_ITEMS: Equipment[] = [
     price: 4500,
     description: '두께 기계 비율 감지로 정밀 연소 두께 반죽을 쉴 새 없이 압축해 구워주는 최고급 롤러.',
     multiplierBoost: 0.8,
-    effectText: '골드 획득 80% 대승 및 백분율 단서 가이드 활성',
+    effectText: '골드 획득 80% 증가',
     unlocked: false,
     spriteIndex: 8
   },
@@ -112,7 +112,7 @@ export const UPGRADE_ITEMS: Equipment[] = [
     price: 1200,
     description: '황금빛으로 코팅되어 비례 배합 성비를 완벽 오차 없이 맞출 수 있는 연금술 주전자입니다.',
     multiplierBoost: 0.3,
-    effectText: '골드 획득 30% 증가 및 분수/소수 복수 정답 가이드 상향',
+    effectText: '골드 획득 30% 증가',
     unlocked: false,
     spriteIndex: 10
   },
@@ -134,7 +134,7 @@ export const UPGRADE_ITEMS: Equipment[] = [
     price: 6000,
     description: '밀리그램 단위의 미세 중량 정수 감도 백분율을 디스플레이로 보여주는 고효율 과학 저울.',
     multiplierBoost: 1.2,
-    effectText: '계량의 정량화: 골드 버프 120% 상승 적용',
+    effectText: '골드 획득 120% 증가',
     unlocked: false,
     spriteIndex: 12
   },
@@ -226,7 +226,7 @@ export const UPGRADE_ITEMS: Equipment[] = [
     price: 8500,
     description: '베이커리 가치 환산, 재료비 손실률, 우수 손님 매출 비율을 완전 자동으로 시각화하는 우주 터미널.',
     multiplierBoost: 1.8,
-    effectText: '완벽 수식화: 우주 최강 골드 획득 180% 퀀텀 닷 적용!',
+    effectText: '골드 획득 180% 적용',
     unlocked: false,
     spriteIndex: 20
   }

@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { MathQuestion, QuestionCategory, Equipment } from '../types';
+import { MathQuestion, QuestionCategory } from '../types';
 import { PixelSprite } from './PixelSprite';
-import { Sparkles, HelpCircle, Utensils, CheckCircle } from 'lucide-react';
+import { Sparkles, HelpCircle, Utensils } from 'lucide-react';
 
 interface MathQuestionBoxProps {
   question: MathQuestion;
-  purchasedEquipment: Equipment[];
   onSubmitAnswer: (answer: string) => void;
   isWrongNotification: boolean;
   isCorrectNotification: boolean;
@@ -15,7 +14,6 @@ interface MathQuestionBoxProps {
 
 export const MathQuestionBox: React.FC<MathQuestionBoxProps> = ({
   question,
-  purchasedEquipment,
   onSubmitAnswer,
   isWrongNotification,
   isCorrectNotification,
@@ -36,11 +34,6 @@ export const MathQuestionBox: React.FC<MathQuestionBoxProps> = ({
     setQtyA(0);
     setQtyB(0);
   }, [question]);
-
-  // Check if scale or book is owned for secret assistance
-  const ownsGoldenMeasuringCup = purchasedEquipment.some(e => e.id === 8);
-  const ownsPrecisionScale = purchasedEquipment.some(e => e.id === 10);
-  const ownsMasterPin = purchasedEquipment.some(e => e.id === 6);
 
   const handleKeypadClick = (val: string) => {
     if (val === 'C') {
@@ -180,25 +173,9 @@ export const MathQuestionBox: React.FC<MathQuestionBoxProps> = ({
 
   return (
     <div className="w-full max-w-2xl bg-white border-4 border-[#5D4037] rounded-3xl shadow-lg p-5 md:p-7 overflow-hidden flex flex-col gap-5 relative text-[#5D4037]" id="curriculum-math-question-card">
-      
-      {/* Decorative Stamp for owned professional equipments */}
-      <div className="absolute right-4 top-4 flex flex-col sm:flex-row gap-1.5 z-10" id="equipment-assistance-badges">
-        {ownsPrecisionScale && (
-          <div className="bg-[#66BB6A]/10 text-[#2E7D32] text-[10px] font-sans font-extrabold border-2 border-[#66BB6A] px-2.5 py-1 rounded-full flex items-center gap-1">
-            <CheckCircle className="w-3.5 h-3.5" />
-            전자저울 소수 환산 지원
-          </div>
-        )}
-        {ownsGoldenMeasuringCup && (
-          <div className="bg-[#FFF4E0] text-[#5D4037] text-[10px] font-sans font-extrabold border-2 border-[#5D4037] px-2.5 py-1 rounded-full flex items-center gap-1">
-            <Sparkles className="w-3.5 h-3.5 text-yellow-600" />
-            정량 황금계량 배합 분석
-          </div>
-        )}
-      </div>
 
       {/* Ribbon Banner Category */}
-      <div className="flex flex-wrap items-center gap-2.5 mb-1.5 mt-8 sm:mt-0">
+      <div className="flex flex-wrap items-center gap-2.5 mb-1.5">
         <span className="bg-[#FFF4E0] text-[#5D4037] text-[11px] font-display font-black px-4 py-1.5 rounded-full border-2 border-[#5D4037] shadow-xs flex items-center gap-2 uppercase tracking-wide">
           <Sparkles className="w-3.5 h-3.5 text-[#FF85A1]" />
           {question.category === QuestionCategory.RATIO_EXPRESSION && '비의 기초 구하기'}
@@ -235,40 +212,14 @@ export const MathQuestionBox: React.FC<MathQuestionBoxProps> = ({
         {question.questionText}
       </div>
 
-      {showHint && question.helperText && (
-        <div className="font-mono text-[11px] text-stone-600 bg-amber-50/60 border-2 border-amber-200 px-3 py-1.5 rounded-xl self-start animate-fade-in shadow-xs">
-          💡 가이드: {question.helperText}
-        </div>
-      )}
-
-      {/* 🔮 Active Real-time Precision Scale Math Helper Panel */}
-      {ownsPrecisionScale && (
-        <div className="bg-[#E8F5E9] border-2 border-[#81C784] rounded-xl p-3 flex flex-col gap-1 w-full shadow-xs text-xs animate-fade-in" id="active-scale-calculator-assistance">
-          <span className="font-display text-[#1B5E20] font-black flex items-center gap-1.5">
-            ⚡ [정밀 전자저울 스마트 보정 수치 측정기]
-          </span>
-          <p className="text-[#2E7D32] font-semibold leading-relaxed m-0">
-            - 이 배합 주문의 정밀 목표 기준 데이터비: <span className="font-mono bg-white text-emerald-800 px-2 py-0.5 rounded border border-[#C8E6C9] font-extrabold text-[12px] align-middle">{question.correctAnswer}</span> 입니다.
-            <br />
-            - 최적의 기준 비율과 백분율 보정식을 기입하여 베이킹 수치를 오븐에 올바르게 납품해 주세요!
-          </p>
-        </div>
-      )}
-
-      {/* Hint reveal panel */}
       {showHint && (
         <div className="bg-[#FFF4E0]/50 border-4 border-[#5D4037] rounded-2xl p-4 text-xs sm:text-sm text-[#5D4037] leading-relaxed font-sans shadow-sm animate-fade-in" id="hint-bubble-box">
-          <span className="font-black text-[#D64566]">💡 [장인의 황금 레시피 힌트]</span><br/>
+          <span className="font-black text-[#D64566]">💡 [베이킹 힌트]</span><br/>
           <span className="block mt-1 font-medium">{question.hint}</span>
-          {ownsMasterPin && (
-            <div className="mt-2.5 pt-2 border-t border-[#5D4037]/15 text-[11px] text-[#D64566] font-black">
-              ✨ 황금 밀대 효과: 이 문제의 정답 형식은 <span className="underline font-black font-mono">"{question.correctAnswer}"</span> 패턴과 유사하게 분석됩니다!
-            </div>
-          )}
-          {ownsPrecisionScale && (question.category === QuestionCategory.RATIO_VALUE_DECIMAL || question.category === QuestionCategory.RATIO_VALUE_FRACTION) && (
-            <div className="text-[11px] text-emerald-800 font-extrabold mt-1">
-              🔍 하이테크 저울 계량 지표: 정밀 기대 비율값 = {(eval(question.correctAnswer) || 0).toFixed(3).replace(/\.?0+$/, '')}
-            </div>
+          {question.helperText && (
+            <span className="block mt-2 pt-2 border-t border-[#5D4037]/15 text-[11px] text-stone-600 font-semibold">
+              📌 {question.helperText}
+            </span>
           )}
         </div>
       )}

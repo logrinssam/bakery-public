@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { PlayerStats, ShopType, MathQuestion, Stage, Equipment, QuestionCategory } from './types';
-import { STAGES, generateQuestionsForStage } from './data/stages';
+import { STAGES, generateQuestionsForStage, QUESTIONS_PER_STAGE } from './data/stages';
 import { UPGRADE_ITEMS, getActiveGoldMultiplierBoost } from './data/equipment';
 import { PixelSprite, BREADS_METADATA } from './components/PixelSprite';
 import { MathQuestionBox } from './components/MathQuestionBox';
@@ -219,8 +219,8 @@ export default function App() {
       // Incorrect state trigger
       setIsWrong(true);
       
-      // Shield protector: purchased Master Pin (ID: 6) lets you guard current combo streak once!
-      const isShieldActive = stats.purchasedEquipmentIds.includes(6) && stats.streakCount > 0;
+      // Shield protector: Golden Metal Pin (ID: 7) guards combo streak on a wrong answer
+      const isShieldActive = stats.purchasedEquipmentIds.includes(7) && stats.streakCount > 0;
       
       const updatedStats: PlayerStats = {
         ...stats,
@@ -249,7 +249,7 @@ export default function App() {
     setIsBakingActive(false);
     
     // Jump to next question or complete stage
-    if (currentQIndex < 4) {
+    if (currentQIndex < QUESTIONS_PER_STAGE - 1) {
       const nextIndex = currentQIndex + 1;
       setCurrentQIndex(nextIndex);
       const nextMascot = selectMascot(activeStageId!, nextIndex, stats.purchasedEquipmentIds);
@@ -267,7 +267,7 @@ export default function App() {
         encounteredMascotNames: updatedMascots
       });
     } else {
-      // All 5 solved! Progress unlocked stage
+      // All stage questions solved — unlock progress
       const clearedStageId = activeStageId!;
       const currentProgress = stats.stageProgress;
       const nextProgress = clearedStageId === currentProgress ? Math.min(50, currentProgress + 1) : currentProgress;
@@ -741,11 +741,11 @@ export default function App() {
                   <div className="bg-white/80 border border-amber-200 rounded-xl p-3 flex flex-col gap-1.5 relative z-10 sm:col-span-1" id="kitchen-delivery-progress-status">
                     <div className="flex justify-between items-center text-xs font-sans">
                       <span className="font-bold text-stone-600">주문 접수 완료</span>
-                      <span className="font-mono font-bold text-[#E67E22]">{currentQIndex} / 5 장</span>
+                      <span className="font-mono font-bold text-[#E67E22]">{currentQIndex + 1} / {QUESTIONS_PER_STAGE} 장</span>
                     </div>
 
                     <div className="flex items-center gap-1 mt-0.5">
-                      {Array.from({ length: 5 }).map((_, i) => (
+                      {Array.from({ length: QUESTIONS_PER_STAGE }).map((_, i) => (
                         <div 
                           key={i} 
                           className={`flex-1 h-1.5 rounded-full border border-stone-200/50 ${
@@ -837,7 +837,6 @@ export default function App() {
                   {currentQuestion && (
                     <MathQuestionBox
                       question={currentQuestion}
-                      purchasedEquipment={UPGRADE_ITEMS.filter(e => stats.purchasedEquipmentIds.includes(e.id))}
                       onSubmitAnswer={handleSubmitAnswer}
                       isWrongNotification={isWrong}
                       isCorrectNotification={isCorrect}

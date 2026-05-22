@@ -68,6 +68,8 @@ export const STAGES: Stage[] = [
   { id: 50, name: '명예의 베이커리', representativeMenu: '시그니처 빵', shopType: ShopType.FINAL, backgroundImage: '/assets/shops/shop_final.png', requiredStars: 180, goldMultiplier: 50.0, theme: '비와 비율의 마스터 선서' }
 ];
 
+export const QUESTIONS_PER_STAGE = 10;
+
 // Helper to determine clean whole number factors
 function getCleanFraction(seed: number): { numerator: number; denominator: number; decimal: number; percent: number } {
   const choices = [
@@ -103,15 +105,15 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
   const questions: MathQuestion[] = [];
   const menu = stage.representativeMenu;
 
-  // Let's create 5 consistent questions based on the stage themes
-  // Seed offsets using stageId to make questions deterministic but varied
-  for (let qIndex = 1; qIndex <= 5; qIndex++) {
+  // 10 questions per stage (reuses 5 templates with varied seeds for 6–10)
+  for (let qIndex = 1; qIndex <= QUESTIONS_PER_STAGE; qIndex++) {
+    const slot = ((qIndex - 1) % 5) + 1;
     const seed = (stageId * 7) + (qIndex * 13);
     const id = (stageId * 100) + qIndex;
 
     if (stage.shopType === ShopType.COOKIE) {
       // 1-10: Basic Ratio Expression
-      if (qIndex === 1) {
+      if (slot === 1) {
         // Simple Ratio count
         const countA = 3 + (seed % 6);
         const countB = 2 + ((seed + 2) % 5);
@@ -125,7 +127,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
           acceptableAnswers: [`${countA}:${countB}`, `${countA} : ${countB}`],
           hint: 'A와 B의 비는 기호(:)를 사용하여 A:B 형태로 나타냅니다. 순서가 밀리지 않도록 하세요.'
         });
-      } else if (qIndex === 2) {
+      } else if (slot === 2) {
         // A에 대한 B의 비와 같은 함정 문제
         const compareVal = 2 + (seed % 5);
         const baseVal = 5 + ((seed + 1) % 6);
@@ -139,7 +141,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
           acceptableAnswers: [`${compareVal}:${baseVal}`, `${compareVal} : ${baseVal}`],
           hint: '초등학교 6학년 수학의 핵심! "~에 대한"이 달라붙는 쪽이 언제나 뒤쪽인 "기준량(오른쪽)"에 배치됩니다. 따라서 "A에 대한 B의 비"는 B:A 입니다!'
         });
-      } else if (qIndex === 3) {
+      } else if (slot === 3) {
         // 기준량 맞추기
         const countA = 4 + (seed % 6);
         const countB = 7 + ((seed + 3) % 4);
@@ -152,7 +154,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
           acceptableAnswers: [`${countB}`],
           hint: '"밀대 수에 대한" 이라고 했으니 밀대 수가 기준량(뒤)이 됩니다. 뒤에 놓인 숫자를 적으면 됩니다.'
         });
-      } else if (qIndex === 4) {
+      } else if (slot === 4) {
         // 비교하는 양 맞추기
         const countA = 5 + (seed % 5);
         const countB = 9 + ((seed + 1) % 4);
@@ -184,7 +186,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
     } else if (stage.shopType === ShopType.CUPCAKE) {
       // 11-15: Cupcake Shop (Ratio Value in Fraction)
       const frac = getCleanFraction(seed);
-      if (qIndex === 1) {
+      if (slot === 1) {
         questions.push({
           id,
           category: QuestionCategory.RATIO_VALUE_FRACTION,
@@ -194,7 +196,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
           acceptableAnswers: [`${frac.numerator}/${frac.denominator}`],
           hint: '비율 = (비교하는 양) ÷ (기준량) 입니다. "전체 수에 대한" 이므로 분모가 전체 수인 ' + frac.denominator + ' 이 되고, 초코 수가 분자인 ' + frac.numerator + ' 가 됩니다.'
         });
-      } else if (qIndex === 2) {
+      } else if (slot === 2) {
         // Comparing A vs B ratio value
         const valA = 3 + (seed % 6);
         const valB = 10;
@@ -209,7 +211,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
           ],
           hint: '물에 대한 비율이므로 기준량은 물(10)입니다. 비율은 기약분수 형태로 약분하여도 정답 인정됩니다.'
         });
-      } else if (qIndex === 3) {
+      } else if (slot === 3) {
         // Percentage conversion basic
         const frac2 = getCleanFraction(seed + 1);
         questions.push({
@@ -220,7 +222,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
           acceptableAnswers: [`${frac2.numerator}/${frac2.denominator}`],
           hint: '전체 상자 수에 대한 리본 달린 상자 수입니다. 분모는 ' + frac2.denominator + ', 분자는 ' + frac2.numerator + ' 입니다.'
         });
-      } else if (qIndex === 4) {
+      } else if (slot === 4) {
         // Option select question
         const options = ['3/4', '1/4', '4/3', '1/3'];
         questions.push({
@@ -250,7 +252,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
     } else if (stage.shopType === ShopType.CAKE) {
       // 16-20: Cake Shop (Ratio Value in Decimal)
       const frac = getCleanFraction(seed);
-      if (qIndex === 1) {
+      if (slot === 1) {
         questions.push({
           id,
           category: QuestionCategory.RATIO_VALUE_DECIMAL,
@@ -259,7 +261,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
           acceptableAnswers: [`${frac.decimal}`, `${frac.decimal}`.replace('0.', '.')],
           hint: `비율인 분수 ${frac.numerator}/${frac.denominator}를 소수로 환산하기 위해 분자를 분모로 나누면 됩니다: ${frac.numerator} ÷ ${frac.denominator} = ${frac.decimal} 입니다.`
         });
-      } else if (qIndex === 2) {
+      } else if (slot === 2) {
         // Decimal ratio of water vs oil
         const compare = 3;
         const total = 5; // 3/5 = 0.6
@@ -271,7 +273,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
           acceptableAnswers: [`0.6`, `.6`],
           hint: '3/5을 소수로 나타내면 0.6입니다.'
         });
-      } else if (qIndex === 3) {
+      } else if (slot === 3) {
         // Large cake slicing ratio fraction to decimal
         const sliceNum = 4;
         const totalSlices = 20; // 4/20 = 0.2
@@ -283,7 +285,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
           acceptableAnswers: [`0.2`, `.2`],
           hint: `${sliceNum}/20 = 2/10 이므로 소수 한 자리수인 0.2가 됩니다.`
         });
-      } else if (qIndex === 4) {
+      } else if (slot === 4) {
         const optionList = ['0.12', '0.4', '0.25', '0.3'];
         questions.push({
           id,
@@ -312,7 +314,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
     } else if (stage.shopType === ShopType.DONUT) {
       // 21-25: Donut Shop (Percentage Conversions)
       const frac = getCleanFraction(seed);
-      if (qIndex === 1) {
+      if (slot === 1) {
         questions.push({
           id,
           category: QuestionCategory.PERCENTAGE_CONVERSION,
@@ -322,7 +324,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
           unit: '%',
           hint: `백분율은 기준량을 100으로 둘 때의 비율입니다. 소수 비율에 100을 곱하면 퍼센트(%) 단위를 얻을 수 있습니다: ${frac.decimal} × 100 = ${frac.percent}% 입니다.`
         });
-      } else if (qIndex === 2) {
+      } else if (slot === 2) {
         const decimalVal = 0.15 + ((seed % 10) / 100); // from 0.15 to 0.24
         const ansPercent = Math.round(decimalVal * 100);
         questions.push({
@@ -334,7 +336,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
           unit: '%',
           hint: '소수에 100을 곱한 뒤 % 기호를 붙이면 백분율이 완성됩니다. 예: 0.15는 15% 입니다.'
         });
-      } else if (qIndex === 3) {
+      } else if (slot === 3) {
         const numer = 3;
         const denom = 5; // 3/5 = 60
         questions.push({
@@ -346,7 +348,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
           unit: '%',
           hint: `${numer}/${denom} = 6/10 = 60/100 이므로, 100을 곱하면 60%가 됩니다.`
         });
-      } else if (qIndex === 4) {
+      } else if (slot === 4) {
         // Selection options
         const opts = ['15%', '35%', '45%', '55%'];
         questions.push({
@@ -379,7 +381,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
       const totalMacarons = 10 + ((seed % 5) * 10); // 10, 20, 30, 40, 50
       const frac = getCleanFraction(seed + 2);
       const targetCount = Math.round(totalMacarons * (frac.percent / 100));
-      if (qIndex === 1) {
+      if (slot === 1) {
         questions.push({
           id,
           category: QuestionCategory.APPLIED_WORD_PROBLEM,
@@ -389,7 +391,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
           unit: '개',
           hint: `'비교하는 양(딸기 수) = 기준량(전체 마카롱 수) × 비율(백분율 ÷ 100)' 공식을 활용해 보세요: ${totalMacarons} × ${frac.percent / 100} = ${targetCount}개 입니다.`
         });
-      } else if (qIndex === 2) {
+      } else if (slot === 2) {
         const total = 40;
         const percent = 25; // 40 * 0.25 = 10
         questions.push({
@@ -401,7 +403,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
           unit: '개',
           hint: '40개의 25% (40 × 0.25)는 10개입니다.'
         });
-      } else if (qIndex === 3) {
+      } else if (slot === 3) {
         const totalNum = 15;
         const ratioText = '4:1'; // chocolate to vanilla. chocolate is 4/5, vanilla is 1/5
         questions.push({
@@ -413,7 +415,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
           unit: '개',
           hint: '전체 15개 중 바닐라 꼬끄는 비 4:1의 비율 배분에 의해 전체의 1/(4+1) = 1/5 만큼을 차지합니다. 따라서 15 × 1/5 = 3개 입니다.'
         });
-      } else if (qIndex === 4) {
+      } else if (slot === 4) {
         const optionSelect = ['6개', '12개', '18개', '24개'];
         questions.push({
           id,
@@ -448,7 +450,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
       const savings = Math.round(basePrice * (discountRate / 100));
       const salePrice = basePrice - savings;
 
-      if (qIndex === 1) {
+      if (slot === 1) {
         questions.push({
           id,
           category: QuestionCategory.DISCOUNT_CALCULATION,
@@ -458,7 +460,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
           unit: '원',
           hint: `'지불할 가격 = 원래 가격 × (1 - 할인율 ÷ 100)' 공식을 대입합니다: ${basePrice} × (1 - ${discountRate / 100}) = ${salePrice}원 입니다.`
         });
-      } else if (qIndex === 2) {
+      } else if (slot === 2) {
         const fixedBasePrice = 8000;
         const fixedSalePrice = 6400; // 1600 off = 20%
         questions.push({
@@ -470,7 +472,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
           unit: '%',
           hint: '할인된 액수는 8000 - 6400 = 1600원 입니다. 할인율은 원래 금액 대비 할인 금액의 비율을 뜻해요: 1600 ÷ 8000 = 0.2 이므로 백분율로 환산하면 20% 입니다.'
         });
-      } else if (qIndex === 3) {
+      } else if (slot === 3) {
         const beforePrice = 12000;
         const couponVal = 15; // 1800 off = 10200
         questions.push({
@@ -482,7 +484,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
           unit: '원',
           hint: '구매하려는 가격이 아닌 깎아준 "순수 할인 금액"을 묻는 질문입니다. 원래 금액의 15% 를 구하면 됩니다: 12000 × 0.15 = 1800원 입니다.'
         });
-      } else if (qIndex === 4) {
+      } else if (slot === 4) {
         const optionMarket = ['5250원', '4500원', '5500원', '6000원'];
         questions.push({
           id,
@@ -511,7 +513,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
 
     } else if (stage.shopType === ShopType.ROYAL) {
       // 41-45: Royal Bakery ( Mixtures & Advanced Rates & Compound Ratios )
-      if (qIndex === 1) {
+      if (slot === 1) {
         // Percentage of mixture concentration
         const glucoseGram = 40;
         const creamGram = 160; // total 200g. 40/200 = 20%
@@ -524,7 +526,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
           unit: '%',
           hint: '혼합 설탕 시럽/무스의 농도 비율을 구하는 문제입니다. 기준량은 분말과 무스 전체를 골고루 합친 총 중량입니다: 40 + 160 = 200g. 비교하는 비교량은 포도당 무게인 40g입니다. 따라서 비율은 40 ÷ 200 = 0.2, 백분율 표기는 20% 입니다!'
         });
-      } else if (qIndex === 2) {
+      } else if (slot === 2) {
         // Reverse calculation of original base amount
         const savingsCost = 1500;
         const disPercent = 30; // 1500 / 0.3 = 5000
@@ -537,7 +539,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
           unit: '원',
           hint: '할인된 차액 1500원 자체가 원래 정가의 30%에 해당하는 가치를 가집니다. 따라서 기준량(원래의 가격) = 비교하는 양(할인 금액) ÷ 할인율식에 대입해 거꾸로 추적하세요: 1500 ÷ 0.3 = 5000원 입니다.'
         });
-      } else if (qIndex === 3) {
+      } else if (slot === 3) {
         const goldenN = 3;
         const royalN = 8;
         questions.push({
@@ -548,7 +550,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
           acceptableAnswers: [`${royalN}:${goldenN}`, `${royalN} : ${goldenN}`],
           hint: '"꿀 소스 수에 대한" 이므로 꿀 소스 수(' + goldenN + ')가 영리하게 오른쪽 기준량으로 이동하고, 이스트 반죽 수(' + royalN + ')가 왼쪽 비교하는 양에 할당됩니다.'
         });
-      } else if (qIndex === 4) {
+      } else if (slot === 4) {
         const optionRoyalList = ['150개', '200개', '250개', '300개'];
         questions.push({
           id,
@@ -577,7 +579,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
 
     } else {
       // 46-50: Hall of Fame (Championship, Legendary & Master Level)
-      if (qIndex === 1) {
+      if (slot === 1) {
         // Compound mixture problem
         const sugar = 30;
         const flour = 270; // total 300g. 30/300 = 10%
@@ -590,7 +592,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
           unit: '%',
           hint: '전체 혼합된 반죽 무게는 밀가루 + 시럽 분량인 ' + (flour + sugar) + 'g 이 기준량이 되고, 시럽 ' + sugar + 'g 이 비교하는 양이 되어 30/300 = 1/10 = 10% 비율이 됩니다.'
         });
-      } else if (qIndex === 2) {
+      } else if (slot === 2) {
         // original price compound
         const origPrice = 15000;
         const firstDiscount = 20; // 15000 * 0.8 = 12000
@@ -604,7 +606,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
           unit: '원',
           hint: '연속 할인 계산법입니다. 첫 번째 할인에 의해 15000 × 0.8 = 12000원이 유도되고, 여기서 다시 10%를 깎으므로 12000 × 0.9 = 10800원이 됩니다. (이것은 통합 30% 할인이 아니니 절대 한 번에 합치지 마세요!)'
         });
-      } else if (qIndex === 3) {
+      } else if (slot === 3) {
         // Base amount conversion word problem
         questions.push({
           id,
@@ -615,7 +617,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
           unit: '개',
           hint: '바게트에 대한 크루아상의 비율이 0.75 이므로 바게트가 분모인 기준량(120), 크루아상이 비교량입니다. 비교하는 양 = 기준량 × 비율 이므로 120 × 0.75 = 90개 입니다.'
         });
-      } else if (qIndex === 4) {
+      } else if (slot === 4) {
         const optionMasterList = ['400개', '500개', '600개', '800개'];
         questions.push({
           id,
