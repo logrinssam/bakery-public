@@ -1,0 +1,4 @@
+# Cloudflare Pages (Git 연동 시 대시보드 설정과 동일하게 유지)
+name = "pixel-bakery"
+compatibility_date = "2024-09-23"
+pages_build_output_dir = "dist"
