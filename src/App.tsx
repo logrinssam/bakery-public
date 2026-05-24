@@ -93,6 +93,10 @@ export default function App() {
     }
   }, []);
 
+  useEffect(() => {
+    document.title = '픽셀 베이커리';
+  }, []);
+
   // Sync state to local storage whenever stats variable updates
   const saveStats = (newStats: PlayerStats) => {
     setStats(newStats);
