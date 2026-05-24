@@ -1,8 +1,0 @@
-{
-  "name": "login-kyosil-landing",
-  "private": true,
-  "scripts": {
-    "build": "node -e \"console.log('static landing — no build')\"",
-    "deploy": "npx wrangler deploy"
-  }
-}
