@@ -3,6 +3,10 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
+if (import.meta.env.PROD) {
+  void import('./lib/runtimeGuard.ts');
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
