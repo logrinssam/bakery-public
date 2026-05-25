@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { PlayerStats, HallRecord } from '../types';
 import { PixelSprite } from './PixelSprite';
+import {
+  INPUT_LIMITS,
+  parseHallRecords,
+  sanitizeDisplayText,
+  STORAGE_KEYS,
+} from '../lib/safeStorage';
 import { 
   Award, 
   ArrowLeft, 
@@ -39,9 +45,9 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
   // Sync records from localStorage
   useEffect(() => {
     try {
-      const stored = localStorage.getItem('pixel_bakery_hall_records');
+      const stored = localStorage.getItem(STORAGE_KEYS.hallRecords);
       if (stored) {
-        setRecords(JSON.parse(stored));
+        setRecords(parseHallRecords(JSON.parse(stored)));
       } else {
         // Sample legendary records for classroom context
         const sampleRecords: HallRecord[] = [
@@ -52,7 +58,7 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
           { id: '5', name: '김태우 브레드', schoolName: '은빛초등학교', comment: '할인율 계산하는 상점들 짱 재밌었어요! 전교 1등할래요!', date: '2026-05-21', stars: 175, highestStreak: 15 },
           { id: '6', name: '박사랑 버터', schoolName: '새봄초등학교', comment: '50관문 클리어!! 드디어 왕실 파티셰 임명장 받았다!', date: '2026-05-21', stars: 160, highestStreak: 10 }
         ];
-        localStorage.setItem('pixel_bakery_hall_records', JSON.stringify(sampleRecords));
+        localStorage.setItem(STORAGE_KEYS.hallRecords, JSON.stringify(sampleRecords));
         setRecords(sampleRecords);
       }
     } catch {
@@ -221,30 +227,33 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
 
   const handleRegisterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userName.trim() || !schoolName.trim() || !userComment.trim()) return;
+    const name = sanitizeDisplayText(userName, INPUT_LIMITS.hallName);
+    const school = sanitizeDisplayText(schoolName, INPUT_LIMITS.hallSchool);
+    const comment = sanitizeDisplayText(userComment, INPUT_LIMITS.hallComment);
+    if (!name || !school || !comment) return;
 
-    onRegister(userName.trim(), schoolName.trim(), userComment.trim());
+    onRegister(name, school, comment);
     setRegistered(true);
 
     // Append to local records immediately
     const newRecord: HallRecord = {
       id: Date.now().toString(),
-      name: userName.trim(),
-      schoolName: schoolName.trim(),
-      comment: userComment.trim(),
+      name,
+      schoolName: school,
+      comment,
       date: new Date().toISOString().split('T')[0],
       stars: stats.starsEarned,
       highestStreak: stats.highestStreak
     };
 
     const updated = [newRecord, ...records];
-    localStorage.setItem('pixel_bakery_hall_records', JSON.stringify(updated));
+    localStorage.setItem(STORAGE_KEYS.hallRecords, JSON.stringify(updated));
     setRecords(updated);
 
     // Auto trigger download for top-tier positive reinforcement
     handleDownloadCertificate(
-      userName.trim(),
-      schoolName.trim(),
+      name,
+      school,
       stats.starsEarned,
       stats.highestStreak,
       newRecord.date
@@ -443,6 +452,7 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
                   id="fame-school"
                   value={schoolName}
                   onChange={(e) => setSchoolName(e.target.value)}
+                  maxLength={INPUT_LIMITS.hallSchool}
                   placeholder="예: 빛솔초등학교"
                   required
                   className="bg-white border-4 border-[#5D4037] rounded-2xl px-4 py-3 font-sans text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#FF85A1]/20 shadow-sm"
@@ -456,6 +466,7 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
                   id="fame-name"
                   value={userName}
                   onChange={(e) => setUserName(e.target.value)}
+                  maxLength={INPUT_LIMITS.hallName}
                   placeholder="예: 백분율왕 민준이"
                   required
                   className="bg-white border-4 border-[#5D4037] rounded-2xl px-4 py-3 font-sans text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#FF85A1]/20 shadow-sm"
@@ -469,6 +480,7 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
                   id="fame-comment"
                   value={userComment}
                   onChange={(e) => setUserComment(e.target.value)}
+                  maxLength={INPUT_LIMITS.hallComment}
                   placeholder="예: 수학 마스터 완료!"
                   required
                   className="bg-white border-4 border-[#5D4037] rounded-2xl px-4 py-3 font-sans text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#FF85A1]/20 shadow-sm"

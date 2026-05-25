@@ -8,6 +8,13 @@ import { CabinetScreen } from './components/CabinetScreen';
 import { HallOfFame } from './components/HallOfFame';
 import { InteractiveBacking } from './components/InteractiveBacking';
 import { CollectionBook } from './components/CollectionBook';
+import {
+  clearAllGameStorage,
+  parsePlayerStats,
+  sanitizeDisplayText,
+  STORAGE_KEYS,
+  INPUT_LIMITS,
+} from './lib/safeStorage';
 import { 
   Trophy, 
   Map, 
@@ -87,9 +94,9 @@ export default function App() {
   // Load saved state on mount
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('pixel_bakery_game_save');
+      const saved = localStorage.getItem(STORAGE_KEYS.gameSave);
       if (saved) {
-        setStats(JSON.parse(saved));
+        setStats(parsePlayerStats(JSON.parse(saved), INITIAL_STATS));
       }
     } catch {
       // safe fallback
@@ -104,7 +111,7 @@ export default function App() {
   const saveStats = (newStats: PlayerStats) => {
     setStats(newStats);
     try {
-      localStorage.setItem('pixel_bakery_game_save', JSON.stringify(newStats));
+      localStorage.setItem(STORAGE_KEYS.gameSave, JSON.stringify(newStats));
     } catch {
       // safe fallback
     }
@@ -116,6 +123,19 @@ export default function App() {
 
   const handleResetGame = () => {
     if (window.confirm('정말로 게임을 처음부터 다시 시작하겠습니다? 구매한 모든 기구와 스테이지 진행률이 초기화됩니다.')) {
+      saveStats(INITIAL_STATS);
+      setPage('intro');
+      setActiveStageId(null);
+    }
+  };
+
+  const handleClearBrowserData = () => {
+    if (
+      window.confirm(
+        '이 기기에 저장된 게임 진행과 명예의 전당 기록을 모두 삭제합니다. 공용 PC에서는 수업 후 실행해 주세요. 계속할까요?'
+      )
+    ) {
+      clearAllGameStorage();
       saveStats(INITIAL_STATS);
       setPage('intro');
       setActiveStageId(null);
@@ -311,9 +331,9 @@ export default function App() {
     saveStats({
       ...stats,
       hallOfFameRegistered: true,
-      hallName: name,
-      hallSchool: school,
-      hallComment: comment,
+      hallName: sanitizeDisplayText(name, INPUT_LIMITS.hallName),
+      hallSchool: sanitizeDisplayText(school, INPUT_LIMITS.hallSchool),
+      hallComment: sanitizeDisplayText(comment, INPUT_LIMITS.hallComment),
       hallDate: new Date().toISOString().split('T')[0]
     });
   };
@@ -504,6 +524,9 @@ export default function App() {
                   <span>현재 세이브 복원: <b>{stats.stageProgress}스테이지 진행 중</b> (⭐{stats.starsEarned} 스타)</span>
                   <button type="button" onClick={handleResetGame} className="text-red-600 underline font-semibold flex items-center gap-0.5 hover:text-red-700">
                     <RotateCcw className="w-3 h-3" /> 초기화
+                  </button>
+                  <button type="button" onClick={handleClearBrowserData} className="text-stone-500 underline font-semibold hover:text-stone-700">
+                    이 기기 저장 데이터 전체 삭제
                   </button>
                 </div>
               )}
