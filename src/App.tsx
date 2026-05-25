@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { PlayerStats, ShopType, MathQuestion, Stage, Equipment, QuestionCategory } from './types';
 import { STAGES, generateQuestionsForStage, QUESTIONS_PER_STAGE } from './data/stages';
 import { UPGRADE_ITEMS, getActiveGoldMultiplierBoost } from './data/equipment';
@@ -15,6 +15,12 @@ import {
   STORAGE_KEYS,
   INPUT_LIMITS,
 } from './lib/safeStorage';
+import {
+  loadSfxMutedPreference,
+  playPixelSFX,
+  primePixelSFX,
+  setSfxMuted,
+} from './lib/pixelSfx';
 import { 
   Trophy, 
   Map, 
@@ -29,7 +35,9 @@ import {
   ArrowRight,
   Flame,
   Award,
-  BookOpen
+  BookOpen,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 
 const INITIAL_STATS: PlayerStats = {
@@ -91,7 +99,15 @@ export default function App() {
   // Mascot generator per question
   const [activeMascot, setActiveMascot] = useState<any>(MASCOTS[0]);
 
+  const [sfxMuted, setSfxMutedState] = useState(false);
+
   // Load saved state on mount
+  const sfxPrimedRef = useRef(false);
+
+  useEffect(() => {
+    setSfxMutedState(loadSfxMutedPreference());
+  }, []);
+
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.gameSave);
@@ -101,6 +117,20 @@ export default function App() {
     } catch {
       // safe fallback
     }
+  }, []);
+
+  useEffect(() => {
+    const primeOnce = () => {
+      if (sfxPrimedRef.current) return;
+      sfxPrimedRef.current = true;
+      primePixelSFX();
+    };
+    window.addEventListener('pointerdown', primeOnce, { once: true });
+    window.addEventListener('keydown', primeOnce, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', primeOnce);
+      window.removeEventListener('keydown', primeOnce);
+    };
   }, []);
 
   useEffect(() => {
@@ -196,6 +226,8 @@ export default function App() {
                       normalize(question.correctAnswer) === cleanUser;
 
     if (isMatched) {
+      playPixelSFX('correct');
+
       // Compute correct reward calculations
       const stage = STAGES.find(s => s.id === activeStageId)!;
       const baseGold = Math.round(50 * (stage.goldMultiplier || 1.0));
@@ -209,6 +241,10 @@ export default function App() {
       const finalGold = Math.round(baseGold * (1 + sumEquipmentBoost) * vipMultiplier);
       const nextStreak = stats.streakCount + 1;
       const nextHighestStreak = Math.max(stats.highestStreak, nextStreak);
+
+      if (nextStreak === 3 || nextStreak === 5) {
+        playPixelSFX('streak');
+      }
 
       // Determine correct representative bread sprite based on stage shop structure (1:1 align with stage 1~50 => index 0~49)
       const targetSpriteIndex = Math.max(0, Math.min(49, activeStageId - 1));
@@ -243,6 +279,8 @@ export default function App() {
       }, 1200);
 
     } else {
+      playPixelSFX('wrong');
+
       // Incorrect state trigger
       setIsWrong(true);
       
@@ -300,6 +338,7 @@ export default function App() {
       const nextProgress = clearedStageId === currentProgress ? Math.min(50, currentProgress + 1) : currentProgress;
 
       const completionBonus = clearedStageId * 100;
+      playPixelSFX('clear');
       saveStats({
         ...stats,
         gold: stats.gold + completionBonus,
@@ -318,6 +357,8 @@ export default function App() {
       return;
     }
 
+    playPixelSFX('upgrade');
+
     const updated: PlayerStats = {
       ...stats,
       gold: stats.gold - item.price,
@@ -325,6 +366,16 @@ export default function App() {
     };
     saveStats(updated);
     alert(`🛒 "${item.name}" 연구 기물 가마 개발 성공! 매장 진열대에 즉시 수완되었습니다.`);
+  };
+
+  const handleToggleSfx = () => {
+    const nextMuted = !sfxMuted;
+    setSfxMutedState(nextMuted);
+    setSfxMuted(nextMuted);
+    if (!nextMuted) {
+      primePixelSFX();
+      playPixelSFX('correct');
+    }
   };
 
   const handleRegisterToHallOfFame = (name: string, school: string, comment: string) => {
@@ -412,6 +463,25 @@ export default function App() {
               <Home className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" aria-hidden="true" />
               <span className="whitespace-nowrap">클래스 목록</span>
             </a>
+
+            <button
+              type="button"
+              onClick={handleToggleSfx}
+              className={`shrink-0 p-1.5 sm:p-2 rounded-lg border-2 transition-colors flex items-center justify-center ${
+                sfxMuted
+                  ? 'border-white/30 bg-[#4E342E] text-white/50 hover:text-white/80'
+                  : 'border-[#F4D03F] bg-[#4E342E] text-[#F4D03F] hover:bg-[#6D4C41]'
+              }`}
+              title={sfxMuted ? '효과음 켜기' : '효과음 끄기'}
+              aria-label={sfxMuted ? '효과음 켜기' : '효과음 끄기'}
+              aria-pressed={!sfxMuted}
+            >
+              {sfxMuted ? (
+                <VolumeX className="w-4 h-4 sm:w-[18px] sm:h-[18px]" aria-hidden="true" />
+              ) : (
+                <Volume2 className="w-4 h-4 sm:w-[18px] sm:h-[18px]" aria-hidden="true" />
+              )}
+            </button>
 
             {/* Global Wallet Display */}
             <div className="bg-[#4E342E] border-2 border-[#F4D03F] rounded-full px-2.5 sm:px-4 py-1 sm:py-1.5 flex items-center gap-1.5 sm:gap-2 shadow-sm shrink-0">
