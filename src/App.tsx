@@ -60,6 +60,9 @@ const VIP_MASCOTS = [
   { name: '🎩 귀족 젠틀맨 판다 (Lord Panda)', emoji: '🐼', greeting: '신사 최고 회원으로서 오늘 이 마카롱 배합 정답 비율을 검증해주면 특별 정답 포상으로 3배 팁 봉투를 올립니다.', isVip: true }
 ];
 
+/** 로그인클래스 메인(클래스 목록) — 서브도메인 게임 공통 */
+const PORTAL_HOME_URL = 'https://로그인교실.com';
+
 export default function App() {
   const [stats, setStats] = useState<PlayerStats>(INITIAL_STATS);
   const [page, setPage] = useState<'intro' | 'map' | 'kitchen' | 'upgrades' | 'fame'>('intro');
@@ -381,6 +384,15 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-3 ml-auto flex-wrap sm:flex-nowrap">
+            <a
+              href={PORTAL_HOME_URL}
+              className="shrink-0 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg border border-[#F4D03F]/50 bg-[#4E342E] text-[#F4D03F] font-sans text-[9px] sm:text-[10px] font-bold tracking-tight hover:bg-[#6D4C41] hover:border-[#F4D03F] transition-colors flex items-center gap-0.5 sm:gap-1 opacity-90 hover:opacity-100"
+              title="로그인클래스 클래스 목록으로 이동"
+            >
+              <Home className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" aria-hidden="true" />
+              <span className="whitespace-nowrap">클래스 목록</span>
+            </a>
+
             {/* Global Wallet Display */}
             <div className="bg-[#4E342E] border-2 border-[#F4D03F] rounded-full px-2.5 sm:px-4 py-1 sm:py-1.5 flex items-center gap-1.5 sm:gap-2 shadow-sm shrink-0">
               <PixelSprite type="ui" index={0} size={18} className="sm:w-6 sm:h-6" />
