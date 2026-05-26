@@ -95,7 +95,7 @@ const MASCOT_ENTRIES = [
     name: '👑 사자 궁전 폐하 (King Leo)',
     emoji: '🦁',
     description: '왕궁 비례 연성회의 수장. 엄격하고 진중한 카리스마를 가졌지만 달콤한 마카롱에는 정직합니다. 왕실 비법에 통과할 때마다 300% 포상금을 보장합니다.',
-    unlockedClue: '연구소에서 고급 연구 장비를 획득하면 35% 확률로 등극 출몰!',
+    unlockedClue: '도구 상점에서 고급 장비를 구매하면 35% 확률로 등극 출몰!',
     isVip: true,
     baseGreeting: '왕실에서 그대의 비와 비율 소문을 듣고 행차했도다. 3배 골드를 하사하마!'
   },
@@ -103,7 +103,7 @@ const MASCOT_ENTRIES = [
     name: '🦄 별빛 아기 유니콘 (Astro Unicorn)',
     emoji: '🦄',
     description: '오색 수채화 구름에서 정제된 슈가 파우더와 비율의 백분율 극의를 깨닫고자 강림한 성스러운 영수. 우주 별가루 골드 주머니를 전격 하사합니다.',
-    unlockedClue: '정밀 전자저울 등 로열 기물 보유 시 가마 연구 중 돌발 방문!',
+    unlockedClue: '정밀 전자저울 등 로열 장비를 도구 상점에서 갖추면 돌발 방문!',
     isVip: true,
     baseGreeting: '오색 은하수 백분율 황금 비율을 연마하러 왔어요! 3배 골드를 드릴게요! ✨'
   },

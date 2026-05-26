@@ -520,7 +520,7 @@ export default function App() {
       purchasedEquipmentIds: [...stats.purchasedEquipmentIds, item.id]
     };
     saveStats(updated);
-    alert(`🛒 "${item.name}" 연구 기물 가마 개발 성공! 매장 진열대에 즉시 수완되었습니다.`);
+    alert(`🛒 "${item.name}" 구매 완료! 주방에서 바로 사용할 수 있어요.`);
   };
 
   const handleToggleSfx = () => {
@@ -937,8 +937,8 @@ export default function App() {
                     <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-[#5D4037]" />
                   </div>
                   <div className="overflow-hidden">
-                    <h4 className="font-sans text-[10px] text-stone-500 font-bold uppercase tracking-wider">Research Tools</h4>
-                    <p className="font-display text-sm sm:text-lg md:text-xl font-black text-[#5D4037] truncate">{stats.purchasedEquipmentIds.length} 종 연구 완료</p>
+                    <h4 className="font-sans text-[10px] text-stone-500 font-bold uppercase tracking-wider">도구 상점</h4>
+                    <p className="font-display text-sm sm:text-lg md:text-xl font-black text-[#5D4037] truncate">{stats.purchasedEquipmentIds.length}종 도구 보유</p>
                   </div>
                 </div>
                 <button
@@ -946,7 +946,7 @@ export default function App() {
                   onClick={() => setPage('upgrades')}
                   className="btn-pixel-pink px-2.5 sm:px-3.5 py-1.5 rounded-xl text-[10px] sm:text-xs cursor-pointer shrink-0"
                 >
-                  연구소가기
+                  도구 상점
                 </button>
               </div>
             </div>
@@ -1133,7 +1133,7 @@ export default function App() {
                   {/* Active Installed Equipment Shelf inside kitchen screen */}
                   <div className="bg-white/90 border border-amber-200 rounded-xl p-2.5 flex flex-col gap-1 relative z-10 shadow-xs sm:col-span-1" id="kitchen-active-equipment-display">
                     <span className="font-display text-[9px] font-black text-[#5D4037] flex items-center gap-1 border-b pb-1 uppercase select-none">
-                      🔬 가공 활성 연구 장비 ({stats.purchasedEquipmentIds.length}개)
+                      🛠️ 보유 도구 ({stats.purchasedEquipmentIds.length}개)
                     </span>
                     {stats.purchasedEquipmentIds.length === 0 ? (
                       <span className="text-[9px] text-stone-400 font-bold text-center py-1 block">아직 주방 장비가 없습니다.</span>

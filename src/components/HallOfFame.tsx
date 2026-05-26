@@ -8,16 +8,6 @@ import {
   HALL_RECORDS_TOP_LIMIT
 } from '../services/firebaseHall';
 import {
-  subscribeVisitStats,
-  isTeacherStatsEnabled,
-  verifyTeacherPin,
-  type VisitStats,
-  fetchTopSchoolStats,
-  fetchSchoolUserLists,
-  type SchoolVisitStats,
-  type SchoolUserListGroup
-} from '../services/firebaseVisits';
-import {
   filterRecordsForPublishedRanking,
   formatNextRankingPublishLabel,
   formatRankingPublishLabel,
@@ -100,11 +90,6 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
   const [registered, setRegistered] = useState(false);
   const [activeTab, setActiveTab] = useState<'individual' | 'school'>('individual');
   const [showCertSuccessMsg, setShowCertSuccessMsg] = useState(false);
-  const [visitStats, setVisitStats] = useState<VisitStats | null>(null);
-  const [topSchools, setTopSchools] = useState<SchoolVisitStats[]>([]);
-  const [schoolUserLists, setSchoolUserLists] = useState<SchoolUserListGroup[]>([]);
-  const [showTeacherStats, setShowTeacherStats] = useState(false);
-  const [teacherPin, setTeacherPin] = useState<string | null>(null);
   const [registering, setRegistering] = useState(false);
   const [rankingClock, setRankingClock] = useState(() => Date.now());
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
@@ -211,21 +196,6 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
 
     return () => window.clearInterval(autoId);
   }, [loadLocalRecords, refreshHallRecords]);
-
-  useEffect(() => {
-    if (!showTeacherStats || !isFirebaseConfigured() || !teacherPin) return;
-    const unsub = subscribeVisitStats(setVisitStats);
-    const refresh = () => {
-      void fetchTopSchoolStats(12).then(setTopSchools);
-      void fetchSchoolUserLists(teacherPin).then(setSchoolUserLists);
-    };
-    refresh();
-    const id = window.setInterval(refresh, 60_000);
-    return () => {
-      unsub?.();
-      window.clearInterval(id);
-    };
-  }, [showTeacherStats, teacherPin]);
 
   // Handle Certificate Image Generation & Automatic Download via canvas
   const handleDownloadCertificate = (name: string, school: string, stars: number, streak: number, dateStr: string) => {
@@ -384,53 +354,6 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
     setTimeout(() => {
       setShowCertSuccessMsg(false);
     }, 4000);
-  };
-
-  const handleOpenTeacherStats = () => {
-    if (!isTeacherStatsEnabled()) {
-      alert('접속 통계는 VITE_VISITOR_ADMIN_PIN_SHA256 설정 후 사용할 수 있습니다.');
-      return;
-    }
-    const entered = window.prompt('교사용 접속 통계 PIN을 입력하세요.');
-    if (entered === null) return;
-    void verifyTeacherPin(entered).then((ok) => {
-      if (ok) {
-        setTeacherPin(entered.trim());
-        setShowTeacherStats(true);
-      }
-      else alert('PIN이 올바르지 않습니다.');
-    });
-  };
-
-  const handleDeleteHallRecord = async (recordId: string) => {
-    if (!teacherPin) {
-      alert('교사용 PIN을 먼저 입력해 주세요.');
-      return;
-    }
-    if (!window.confirm('이 명예의 전당 기록을 삭제할까요?')) return;
-
-    const projectId = (import.meta.env.VITE_FIREBASE_PROJECT_ID ?? '').trim();
-    if (!projectId) {
-      alert('Firebase 프로젝트 설정이 필요합니다.');
-      return;
-    }
-    const endpoint = `https://asia-northeast3-${projectId}.cloudfunctions.net/deleteHallRecord`;
-
-    try {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin: teacherPin, recordId }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data?.ok) {
-        alert('삭제에 실패했습니다. 잠시 후 다시 시도해 주세요.');
-        return;
-      }
-      await refreshHallRecords({ bypassCooldown: true, isManual: true });
-    } catch {
-      alert('삭제에 실패했습니다. 네트워크 상태를 확인해 주세요.');
-    }
   };
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
@@ -671,128 +594,8 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
             <School className="w-4 h-4 text-amber-700" />
             참가 베이커리 학교수: {schoolRanksList.length}개교
           </div>
-          {isFirebaseConfigured() && isTeacherStatsEnabled() && (
-            <button
-              type="button"
-              onClick={handleOpenTeacherStats}
-              className="bg-slate-100 border-4 border-[#5D4037] text-[#5D4037] rounded-2xl px-4 py-2 font-display font-black flex items-center gap-2 shadow-sm hover:bg-slate-200 transition-colors cursor-pointer"
-              title="교사용 접속 통계"
-            >
-              <Users className="w-4 h-4" />
-              접속 통계
-            </button>
-          )}
         </div>
       </div>
-
-      {showTeacherStats && (
-        <div className="bg-slate-50 border-4 border-[#5D4037] rounded-2xl p-4 flex flex-col gap-4">
-          <div>
-            <p className="font-display font-black text-sm text-[#5D4037]">📊 교사용 접속 누계 (Firebase)</p>
-            <p className="text-[10px] font-sans text-stone-500 mt-0.5">
-              브라우저 탭을 새로 열 때마다 세션 1회, 기기당 최초 1회만 고유 접속으로 집계합니다.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3 text-xs font-display font-black">
-            <span className="bg-white border-2 border-[#5D4037] rounded-xl px-4 py-2">
-              누적 접속(세션): {(visitStats?.totalSessions ?? 0).toLocaleString()}회
-            </span>
-            <span className="bg-white border-2 border-[#5D4037] rounded-xl px-4 py-2">
-              접속한 기기(추정 인원): {(visitStats?.uniqueDevices ?? 0).toLocaleString()}대
-            </span>
-          </div>
-
-          <div className="bg-white border-2 border-[#5D4037] rounded-2xl p-3">
-            <p className="font-display font-black text-xs text-[#5D4037] mb-2">🏫 학교별 사용 TOP (추정 인원)</p>
-            {topSchools.length === 0 ? (
-              <p className="text-[10px] font-sans text-stone-500 font-semibold">
-                아직 집계된 학교가 없습니다. 학생이 학교를 입력하고 시작하면 자동으로 반영됩니다.
-              </p>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                {topSchools.map((s, idx) => (
-                  <div
-                    key={`${s.schoolName}-${idx}`}
-                    className="flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl border border-stone-200"
-                  >
-                    <div className="min-w-0">
-                      <span className="text-[10px] font-sans font-black text-stone-500 mr-1.5">#{idx + 1}</span>
-                      <span className="font-sans font-black text-[11px] text-[#5D4037] truncate inline-block max-w-[220px]">
-                        {s.schoolName}
-                      </span>
-                    </div>
-                    <div className="shrink-0 flex items-center gap-2 text-[10px] font-sans font-black">
-                      <span className="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg px-2 py-0.5">
-                        {s.uniqueDevices.toLocaleString()}명
-                      </span>
-                      <span className="bg-amber-50 border border-amber-200 text-amber-900 rounded-lg px-2 py-0.5">
-                        {s.totalSessions.toLocaleString()}회
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="bg-white border-2 border-[#5D4037] rounded-2xl p-3 max-h-[320px] overflow-y-auto">
-            <p className="font-display font-black text-xs text-[#5D4037] mb-2 sticky top-0 bg-white pb-1">
-              👤 학교별 닉네임 목록 (교사용 · PIN 확인 후에만 표시)
-            </p>
-            {schoolUserLists.length === 0 ? (
-              <p className="text-[10px] font-sans text-stone-500 font-semibold">
-                아직 기록된 닉네임이 없습니다. 학생이 학교/닉네임 입력 후 플레이하면 여기에 쌓입니다.
-              </p>
-            ) : (
-              <div className="flex flex-col gap-3">
-                {schoolUserLists.map((group) => (
-                  <div key={group.schoolId} className="border border-stone-200 rounded-xl p-2.5">
-                    <p className="font-sans font-black text-[11px] text-[#5D4037] mb-1.5">
-                      {group.schoolName || '학교'} ({group.users.length}명)
-                    </p>
-                    {group.users.length === 0 ? (
-                      <p className="text-[10px] text-stone-400">—</p>
-                    ) : (
-                      <ul className="flex flex-col gap-1">
-                        {group.users.map((u, i) => (
-                          <li
-                            key={`${group.schoolId}-${i}-${u.nickname}`}
-                            className="flex justify-between gap-2 text-[10px] font-sans font-semibold text-stone-700"
-                          >
-                            <span className="truncate">{u.nickname}</span>
-                            <span className="text-stone-400 shrink-0 font-mono text-[9px]">
-                              {u.lastSeenAt
-                                ? new Intl.DateTimeFormat('ko-KR', {
-                                    month: 'numeric',
-                                    day: 'numeric',
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                    hour12: false,
-                                    timeZone: 'Asia/Seoul',
-                                  }).format(new Date(u.lastSeenAt))
-                                : '—'}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={() => setShowTeacherStats(false)}
-              className="text-[10px] font-sans font-bold text-stone-500 underline cursor-pointer"
-            >
-              닫기
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* [Feature addition] Live Certificate Preview Mockup Section */}
       <div className="bg-amber-50/40 border-4 border-[#8D6E63] rounded-3xl p-6 shadow-xs flex flex-col gap-4">
@@ -1155,17 +958,6 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
                       >
                         <Download className="w-4 h-4" />
                       </button>
-
-                      {showTeacherStats && teacherPin && (
-                        <button
-                          type="button"
-                          onClick={() => void handleDeleteHallRecord(rec.id)}
-                          className="bg-red-50 hover:bg-red-100 text-red-700 border-2 border-red-200 p-1.5 rounded-xl transition-all h-[34px] w-[34px] flex items-center justify-center cursor-pointer"
-                          title="(교사용) 이 기록 삭제하기"
-                        >
-                          <FileText className="w-4 h-4" />
-                        </button>
-                      )}
 
                       <div className="flex items-center gap-1.5 bg-stone-100 border-2 border-stone-200 px-3.5 py-1.5 rounded-xl">
                         <Calendar className="w-4 h-4 text-stone-400" />

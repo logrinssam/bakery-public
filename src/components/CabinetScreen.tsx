@@ -27,13 +27,13 @@ export const CabinetScreen: React.FC<CabinetScreenProps> = ({
             type="button"
             onClick={onBack}
             className="btn-pixel-yellow p-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center"
-            title="상점으로 돌아가기"
+            title="매장 지도로 돌아가기"
             id="back-to-shop-button"
           >
             <ArrowLeft className="w-5 h-5 text-[#5D4037]" />
           </button>
           <div>
-            <h1 className="font-display font-black text-[#5D4037] text-2xl md:text-3xl tracking-tight">🛠️ 베이커리 연구 아카데미</h1>
+            <h1 className="font-display font-black text-[#5D4037] text-2xl md:text-3xl tracking-tight">🛠️ 도구 상점</h1>
             <p className="font-sans text-xs text-stone-500 font-medium mt-1">같은 종류 장비는 최고급 1개만 골드 보너스에 적용됩니다. 특수 효과(힌트·콤보 보호)는 보유한 장비마다 따로 작동해요!</p>
           </div>
         </div>

@@ -1,17 +1,10 @@
 import {
   doc,
   getDoc,
-  getDocs,
-  onSnapshot,
-  query,
-  orderBy,
-  limit,
-  collection,
   serverTimestamp,
   setDoc,
   updateDoc,
-  increment,
-  type Unsubscribe
+  increment
 } from 'firebase/firestore';
 import { getFirebaseDb } from '../lib/firebase';
 import { sanitizeDisplayText, INPUT_LIMITS } from '../lib/safeStorage';
@@ -19,26 +12,6 @@ import { sanitizeDisplayText, INPUT_LIMITS } from '../lib/safeStorage';
 const DEVICE_ID_KEY = 'pixel_bakery_device_id';
 const SESSION_LOGGED_KEY = 'pixel_bakery_session_logged';
 const SCHOOL_SESSION_PREFIX = 'pixel_bakery_school_session_logged_v1:';
-
-export interface VisitStats {
-  totalSessions: number;
-  uniqueDevices: number;
-}
-
-export interface SchoolVisitStats extends VisitStats {
-  schoolName: string;
-}
-
-export type SchoolUserRow = {
-  nickname: string;
-  lastSeenAt: string;
-};
-
-export type SchoolUserListGroup = {
-  schoolId: string;
-  schoolName: string;
-  users: SchoolUserRow[];
-};
 
 function getOrCreateDeviceId(): string {
   let id = localStorage.getItem(DEVICE_ID_KEY);
@@ -107,7 +80,7 @@ export async function recordSessionVisit(): Promise<void> {
  * - counts session once per tab per school
  * - counts unique device once per school (best-effort, based on deviceId doc creation)
  */
-/** 교사 통계용: 학교별 닉네임(학생 saveId당 1명) — PIN/비밀번호는 저장하지 않음 */
+/** 학교별 닉네임(학생 saveId당 1명) — Firestore 콘솔에서 조회 */
 export async function recordSchoolUser(
   schoolName: string,
   nickname: string,
@@ -183,100 +156,4 @@ export async function recordSchoolVisit(schoolName: string): Promise<void> {
   } catch {
     // ignore — stats are non-critical
   }
-}
-
-export function subscribeVisitStats(
-  onStats: (stats: VisitStats) => void
-): Unsubscribe | null {
-  const db = getFirebaseDb();
-  if (!db) return null;
-
-  const statsRef = doc(db, 'meta', 'stats');
-  return onSnapshot(statsRef, (snap) => {
-    const data = snap.data();
-    onStats({
-      totalSessions: Number(data?.totalSessions ?? 0),
-      uniqueDevices: Number(data?.uniqueDevices ?? 0)
-    });
-  });
-}
-
-function teacherFunctionsBase(): string {
-  const projectId = (import.meta.env.VITE_FIREBASE_PROJECT_ID ?? '').trim();
-  if (!projectId) return '';
-  return `https://asia-northeast3-${projectId}.cloudfunctions.net`;
-}
-
-/** 교사 PIN 확인 후 학교별 닉네임 목록 (학생은 읽을 수 없음) */
-export async function fetchSchoolUserLists(
-  pin: string,
-  schoolId?: string
-): Promise<SchoolUserListGroup[]> {
-  const base = teacherFunctionsBase();
-  if (!base) return [];
-  try {
-    const res = await fetch(`${base}/listSchoolUsers`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pin: pin.trim(), schoolId: schoolId ?? '' }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok || !data?.ok || !Array.isArray(data.schools)) return [];
-    return data.schools as SchoolUserListGroup[];
-  } catch {
-    return [];
-  }
-}
-
-export async function fetchTopSchoolStats(topN = 12): Promise<SchoolVisitStats[]> {
-  const db = getFirebaseDb();
-  if (!db) return [];
-  try {
-    const q = query(
-      collection(db, 'schoolStats'),
-      orderBy('uniqueDevices', 'desc'),
-      orderBy('totalSessions', 'desc'),
-      limit(topN)
-    );
-    const snaps = await getDocs(q);
-    const out: SchoolVisitStats[] = [];
-    snaps.forEach((s) => {
-      const d: any = s.data();
-      out.push({
-        schoolName: String(d?.schoolName ?? ''),
-        totalSessions: Number(d?.totalSessions ?? 0),
-        uniqueDevices: Number(d?.uniqueDevices ?? 0),
-      });
-    });
-    return out.filter((x) => x.schoolName);
-  } catch {
-    return [];
-  }
-}
-
-/** 배포 빌드: PIN 평문 대신 SHA-256 해시만 사용 (번들에 비밀번호 노출 방지) */
-export function isTeacherStatsEnabled(): boolean {
-  const hash = (import.meta.env.VITE_VISITOR_ADMIN_PIN_SHA256 ?? '').trim();
-  if (hash.length > 0) return true;
-  return import.meta.env.DEV && Boolean((import.meta.env.VITE_VISITOR_ADMIN_PIN ?? '').trim());
-}
-
-export async function verifyTeacherPin(entered: string): Promise<boolean> {
-  const pin = entered.trim();
-  if (!pin || pin.length > 32) return false;
-
-  const expectedHash = (import.meta.env.VITE_VISITOR_ADMIN_PIN_SHA256 ?? '')
-    .trim()
-    .toLowerCase();
-  if (expectedHash.length > 0) {
-    const actual = await sha256Hex(pin);
-    return actual === expectedHash;
-  }
-
-  if (import.meta.env.DEV) {
-    const plain = (import.meta.env.VITE_VISITOR_ADMIN_PIN ?? '').trim();
-    return plain.length > 0 && pin === plain;
-  }
-
-  return false;
 }
