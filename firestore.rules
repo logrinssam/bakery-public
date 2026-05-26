@@ -8,6 +8,22 @@ service cloud.firestore {
         && isValidPlayerSave(request.resource.data);
     }
 
+    match /schoolStats/{schoolId} {
+      allow read: if true;
+      allow create: if isValidSchoolStatsCreate(request.resource.data);
+      allow update: if isValidSchoolStatsUpdate(request.resource.data);
+      allow delete: if false;
+    }
+
+    match /schoolVisitors/{schoolId}/devices/{deviceId} {
+      allow read: if false;
+      allow create: if deviceId.size() >= 8
+        && deviceId.size() <= 64
+        && request.resource.data.keys().hasOnly(['deviceId', 'firstSeen'])
+        && request.resource.data.deviceId == deviceId;
+      allow update, delete: if false;
+    }
+
     match /hallRecords/{recordId} {
       allow read: if true;
       allow create: if isValidHallRecord(request.resource.data);
@@ -96,6 +112,26 @@ function isValidStatsCreate(data) {
 
 function isValidStatsUpdate(data) {
   return data.keys().hasAll(['totalSessions', 'uniqueDevices'])
+    && data.totalSessions is int
+    && data.uniqueDevices is int
+    && data.totalSessions >= resource.data.totalSessions
+    && data.totalSessions <= resource.data.totalSessions + 1
+    && data.uniqueDevices >= resource.data.uniqueDevices
+    && data.uniqueDevices <= resource.data.uniqueDevices + 1;
+}
+
+function isValidSchoolStatsCreate(data) {
+  return data.keys().hasOnly(['schoolName', 'totalSessions', 'uniqueDevices', 'updatedAt'])
+    && data.schoolName is string
+    && data.schoolName.size() >= 2
+    && data.schoolName.size() <= 80
+    && data.totalSessions == 1
+    && data.uniqueDevices == 0;
+}
+
+function isValidSchoolStatsUpdate(data) {
+  return data.keys().hasAll(['schoolName', 'totalSessions', 'uniqueDevices'])
+    && data.schoolName == resource.data.schoolName
     && data.totalSessions is int
     && data.uniqueDevices is int
     && data.totalSessions >= resource.data.totalSessions

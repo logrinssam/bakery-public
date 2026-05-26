@@ -21,7 +21,7 @@ import {
   primePixelSFX,
   setSfxMuted,
 } from './lib/pixelSfx';
-import { recordSessionVisit } from './services/firebaseVisits';
+import { recordSchoolVisit, recordSessionVisit } from './services/firebaseVisits';
 import { ensureAnonSignedIn } from './services/firebaseAnon';
 import { loadPinSave, savePinStats } from './services/firebasePinSave';
 import { sha256Hex } from './lib/cryptoHash';
@@ -184,6 +184,12 @@ export default function App() {
     document.title = '픽셀 베이커리';
     recordSessionVisit();
   }, []);
+
+  useEffect(() => {
+    if (!stats.hallSchool) return;
+    // best-effort school stats; ok if it fails
+    void recordSchoolVisit(stats.hallSchool);
+  }, [stats.hallSchool]);
 
   // Sync state to local storage whenever stats variable updates
   const saveStats = (newStats: PlayerStats) => {

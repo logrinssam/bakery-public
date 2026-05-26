@@ -11,7 +11,9 @@ import {
   subscribeVisitStats,
   isTeacherStatsEnabled,
   verifyTeacherPin,
-  type VisitStats
+  type VisitStats,
+  fetchTopSchoolStats,
+  type SchoolVisitStats
 } from '../services/firebaseVisits';
 import {
   filterRecordsForPublishedRanking,
@@ -97,6 +99,7 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
   const [activeTab, setActiveTab] = useState<'individual' | 'school'>('individual');
   const [showCertSuccessMsg, setShowCertSuccessMsg] = useState(false);
   const [visitStats, setVisitStats] = useState<VisitStats | null>(null);
+  const [topSchools, setTopSchools] = useState<SchoolVisitStats[]>([]);
   const [showTeacherStats, setShowTeacherStats] = useState(false);
   const [registering, setRegistering] = useState(false);
   const [rankingClock, setRankingClock] = useState(() => Date.now());
@@ -208,6 +211,10 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
   useEffect(() => {
     if (!showTeacherStats || !isFirebaseConfigured()) return;
     const unsub = subscribeVisitStats(setVisitStats);
+    void fetchTopSchoolStats(12).then(setTopSchools);
+    const id = window.setInterval(() => {
+      void fetchTopSchoolStats(12).then(setTopSchools);
+    }, 60_000);
     return () => unsub?.();
   }, [showTeacherStats]);
 
@@ -636,14 +643,14 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
       </div>
 
       {showTeacherStats && (
-        <div className="bg-slate-50 border-4 border-[#5D4037] rounded-2xl p-4 flex flex-wrap gap-4 items-center justify-between">
+        <div className="bg-slate-50 border-4 border-[#5D4037] rounded-2xl p-4 flex flex-col gap-4">
           <div>
             <p className="font-display font-black text-sm text-[#5D4037]">📊 교사용 접속 누계 (Firebase)</p>
             <p className="text-[10px] font-sans text-stone-500 mt-0.5">
               브라우저 탭을 새로 열 때마다 세션 1회, 기기당 최초 1회만 고유 접속으로 집계합니다.
             </p>
           </div>
-          <div className="flex gap-3 text-xs font-display font-black">
+          <div className="flex flex-wrap gap-3 text-xs font-display font-black">
             <span className="bg-white border-2 border-[#5D4037] rounded-xl px-4 py-2">
               누적 접속(세션): {(visitStats?.totalSessions ?? 0).toLocaleString()}회
             </span>
@@ -651,13 +658,49 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
               접속한 기기(추정 인원): {(visitStats?.uniqueDevices ?? 0).toLocaleString()}대
             </span>
           </div>
-          <button
-            type="button"
-            onClick={() => setShowTeacherStats(false)}
-            className="text-[10px] font-sans font-bold text-stone-500 underline cursor-pointer"
-          >
-            닫기
-          </button>
+
+          <div className="bg-white border-2 border-[#5D4037] rounded-2xl p-3">
+            <p className="font-display font-black text-xs text-[#5D4037] mb-2">🏫 학교별 사용 TOP (추정 인원)</p>
+            {topSchools.length === 0 ? (
+              <p className="text-[10px] font-sans text-stone-500 font-semibold">
+                아직 집계된 학교가 없습니다. 학생이 학교를 입력하고 시작하면 자동으로 반영됩니다.
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                {topSchools.map((s, idx) => (
+                  <div
+                    key={`${s.schoolName}-${idx}`}
+                    className="flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl border border-stone-200"
+                  >
+                    <div className="min-w-0">
+                      <span className="text-[10px] font-sans font-black text-stone-500 mr-1.5">#{idx + 1}</span>
+                      <span className="font-sans font-black text-[11px] text-[#5D4037] truncate inline-block max-w-[220px]">
+                        {s.schoolName}
+                      </span>
+                    </div>
+                    <div className="shrink-0 flex items-center gap-2 text-[10px] font-sans font-black">
+                      <span className="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg px-2 py-0.5">
+                        {s.uniqueDevices.toLocaleString()}명
+                      </span>
+                      <span className="bg-amber-50 border border-amber-200 text-amber-900 rounded-lg px-2 py-0.5">
+                        {s.totalSessions.toLocaleString()}회
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => setShowTeacherStats(false)}
+              className="text-[10px] font-sans font-bold text-stone-500 underline cursor-pointer"
+            >
+              닫기
+            </button>
+          </div>
         </div>
       )}
 
