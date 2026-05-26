@@ -11,12 +11,29 @@ export const INPUT_LIMITS = {
   hallComment: 120,
 } as const;
 
-/** Control chars 제거, 길이 제한 (XSS 완화·UI 깨짐 방지) */
+/** Control chars·HTML 특수문자 제거, 길이 제한 (XSS 완화·UI 깨짐 방지) */
 export function sanitizeDisplayText(value: string, maxLen: number): string {
   return value
     .replace(/[\u0000-\u001F\u007F]/g, '')
+    .replace(/[<>&]/g, '')
     .trim()
     .slice(0, maxLen);
+}
+
+/** 서버 제출용 상한 (50단계·10문항 기준 여유치) */
+export const HALL_SUBMIT_LIMITS = {
+  maxStars: 600,
+  maxStreak: 100,
+} as const;
+
+export function clampHallSubmitStats(stars: number, highestStreak: number) {
+  return {
+    stars: Math.min(HALL_SUBMIT_LIMITS.maxStars, Math.max(0, Math.floor(stars))),
+    highestStreak: Math.min(
+      HALL_SUBMIT_LIMITS.maxStreak,
+      Math.max(0, Math.floor(highestStreak))
+    ),
+  };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -103,6 +120,10 @@ export function parseHallRecords(raw: unknown): HallRecord[] {
           : new Date().toISOString().split('T')[0],
       stars: asNumber(item.stars, 0, 0, 9999),
       highestStreak: asNumber(item.highestStreak, 0, 0, 9999),
+      createdAt:
+        typeof item.createdAt === 'string' && item.createdAt.length <= 40
+          ? item.createdAt
+          : undefined,
     });
   }
   return records;

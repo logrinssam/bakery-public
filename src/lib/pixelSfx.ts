@@ -27,37 +27,33 @@ export function isSfxMuted(): boolean {
   return sfxMuted;
 }
 
-function getAudioContext(): AudioContext | null {
+async function ensureAudioContext(): Promise<AudioContext | null> {
   const AudioContextClass =
     window.AudioContext ||
-    (window as Window & {webkitAudioContext?: typeof AudioContext}).webkitAudioContext;
+    (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!AudioContextClass) return null;
 
   if (!sharedCtx) {
     sharedCtx = new AudioContextClass();
   }
   if (sharedCtx.state === 'suspended') {
-    void sharedCtx.resume();
+    try {
+      await sharedCtx.resume();
+    } catch {
+      return null;
+    }
   }
   return sharedCtx;
 }
 
-/** 모바일 자동재생 정책: 첫 터치/클릭 시 한 번 호출 */
+/** 모바일·Chrome 자동재생 정책: 첫 터치/클릭 시 호출 */
 export function primePixelSFX(): void {
-  getAudioContext();
+  void ensureAudioContext();
 }
 
-/**
- * 픽셀베이커리 전용 초경량 8비트 사운드 액션 시스템 (0kb 에셋)
- */
-export const playPixelSFX = (type: PixelSfxType): void => {
-  if (sfxMuted) return;
-
-  const ctx = getAudioContext();
-  if (!ctx) return;
-
+function playTone(ctx: AudioContext, type: PixelSfxType): void {
   const masterGain = ctx.createGain();
-  masterGain.gain.setValueAtTime(0.2, ctx.currentTime);
+  masterGain.gain.setValueAtTime(0.28, ctx.currentTime);
 
   const filter = ctx.createBiquadFilter();
   filter.type = 'lowpass';
@@ -76,8 +72,8 @@ export const playPixelSFX = (type: PixelSfxType): void => {
       osc.frequency.setValueAtTime(523.25, now);
       osc.frequency.setValueAtTime(1318.51, now + 0.08);
 
-      gain.gain.setValueAtTime(0.18, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+      gain.gain.setValueAtTime(0.22, now);
+      gain.gain.linearRampToValueAtTime(0.0001, now + 0.3);
 
       osc.connect(gain);
       gain.connect(masterGain);
@@ -93,8 +89,8 @@ export const playPixelSFX = (type: PixelSfxType): void => {
       osc.frequency.setValueAtTime(185.0, now);
       osc.frequency.linearRampToValueAtTime(75.0, now + 0.25);
 
-      gain.gain.setValueAtTime(0.22, now);
-      gain.gain.linearRampToValueAtTime(0.001, now + 0.28);
+      gain.gain.setValueAtTime(0.24, now);
+      gain.gain.linearRampToValueAtTime(0.0001, now + 0.28);
 
       osc.connect(gain);
       gain.connect(masterGain);
@@ -110,8 +106,8 @@ export const playPixelSFX = (type: PixelSfxType): void => {
       osc.frequency.setValueAtTime(987.77, now);
       osc.frequency.setValueAtTime(1567.98, now + 0.08);
 
-      gain.gain.setValueAtTime(0.15, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.linearRampToValueAtTime(0.0001, now + 0.25);
 
       osc.connect(gain);
       gain.connect(masterGain);
@@ -136,8 +132,8 @@ export const playPixelSFX = (type: PixelSfxType): void => {
       lfo.connect(lfoGain);
       lfoGain.connect(osc.frequency);
 
-      gain.gain.setValueAtTime(0.25, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+      gain.gain.setValueAtTime(0.28, now);
+      gain.gain.linearRampToValueAtTime(0.0001, now + 0.4);
 
       osc.connect(gain);
       gain.connect(masterGain);
@@ -159,8 +155,8 @@ export const playPixelSFX = (type: PixelSfxType): void => {
         oscNode.type = 'square';
         oscNode.frequency.setValueAtTime(freq, playTime);
 
-        gainNode.gain.setValueAtTime(0.12, playTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.001, playTime + 0.22);
+        gainNode.gain.setValueAtTime(0.14, playTime);
+        gainNode.gain.linearRampToValueAtTime(0.0001, playTime + 0.22);
 
         oscNode.connect(gainNode);
         gainNode.connect(masterGain);
@@ -170,4 +166,16 @@ export const playPixelSFX = (type: PixelSfxType): void => {
       break;
     }
   }
+}
+
+/**
+ * 픽셀베이커리 전용 초경량 8비트 사운드 (Web Audio, 0kb 에셋)
+ */
+export const playPixelSFX = (type: PixelSfxType): void => {
+  if (sfxMuted) return;
+
+  void ensureAudioContext().then((ctx) => {
+    if (!ctx) return;
+    playTone(ctx, type);
+  });
 };

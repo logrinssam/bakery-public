@@ -86,4 +86,6 @@ export interface HallRecord {
   date: string;
   stars: number;
   highestStreak: number;
+  /** ISO timestamp — used for scheduled ranking snapshot cutoff */
+  createdAt?: string;
 }

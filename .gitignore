@@ -72,6 +72,10 @@ web_modules/
 .env.*
 !.env.example
 
+# 학교 원본 CSV (로컬/교사용, 커밋 금지)
+학교기본정보_*.csv
+school-source.csv
+
 # parcel-bundler cache (https://parceljs.org/)
 .cache
 .parcel-cache

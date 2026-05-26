@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { PlayerStats, ShopType, MathQuestion, Stage, Equipment, QuestionCategory } from './types';
-import { STAGES, generateQuestionsForStage, QUESTIONS_PER_STAGE } from './data/stages';
+import { STAGES, generateQuestionsForStage, getQuestionsPerStage } from './data/stages';
 import { UPGRADE_ITEMS, getActiveGoldMultiplierBoost } from './data/equipment';
 import { PixelSprite, BREADS_METADATA } from './components/PixelSprite';
 import { MathQuestionBox } from './components/MathQuestionBox';
@@ -21,6 +21,7 @@ import {
   primePixelSFX,
   setSfxMuted,
 } from './lib/pixelSfx';
+import { recordSessionVisit } from './services/firebaseVisits';
 import { 
   Trophy, 
   Map, 
@@ -75,7 +76,7 @@ const VIP_MASCOTS = [
   { name: '🎩 귀족 젠틀맨 판다 (Lord Panda)', emoji: '🐼', greeting: '신사 최고 회원으로서 오늘 이 마카롱 배합 정답 비율을 검증해주면 특별 정답 포상으로 3배 팁 봉투를 올립니다.', isVip: true }
 ];
 
-/** 로그인클래스 메인(클래스 목록) — 서브도메인 게임 공통 */
+/** 로그인교실 메인(교실 목록) — 서브도메인 게임 공통 */
 const PORTAL_HOME_URL = 'https://로그인교실.com';
 
 export default function App() {
@@ -135,6 +136,7 @@ export default function App() {
 
   useEffect(() => {
     document.title = '픽셀 베이커리';
+    recordSessionVisit();
   }, []);
 
   // Sync state to local storage whenever stats variable updates
@@ -148,6 +150,7 @@ export default function App() {
   };
 
   const handleStartGame = () => {
+    primePixelSFX();
     setPage('map');
   };
 
@@ -314,7 +317,8 @@ export default function App() {
     setIsBakingActive(false);
     
     // Jump to next question or complete stage
-    if (currentQIndex < QUESTIONS_PER_STAGE - 1) {
+    const questionsInStage = getQuestionsPerStage(activeStageId!);
+    if (currentQIndex < questionsInStage - 1) {
       const nextIndex = currentQIndex + 1;
       setCurrentQIndex(nextIndex);
       const nextMascot = selectMascot(activeStageId!, nextIndex, stats.purchasedEquipmentIds);
@@ -373,7 +377,6 @@ export default function App() {
     setSfxMutedState(nextMuted);
     setSfxMuted(nextMuted);
     if (!nextMuted) {
-      primePixelSFX();
       playPixelSFX('correct');
     }
   };
@@ -426,14 +429,14 @@ export default function App() {
   // Convert ShopType to readable text
   const getShopTypeKorean = (st: ShopType) => {
     switch (st) {
-      case ShopType.COOKIE: return '바삭 쿠키 상점';
-      case ShopType.CUPCAKE: return '파스텔 컵케이크 상점';
-      case ShopType.CAKE: return '리치 조각 케이크 상점';
-      case ShopType.DONUT: return '수제 글레이즈 도넛 상점';
-      case ShopType.MACARON: return '쫀득 오색 마카롱 상점';
-      case ShopType.MARKET: return '알뜰 백분율 할인 마켓';
-      case ShopType.ROYAL: return '왕실 전속 카스텔라 베이커리';
-      case ShopType.FINAL: return '명예의 파티셰 서약 광장';
+      case ShopType.COOKIE: return '쿠키 상점';
+      case ShopType.CUPCAKE: return '컵케이크 상점';
+      case ShopType.CAKE: return '케이크 상점';
+      case ShopType.DONUT: return '도넛 상점';
+      case ShopType.MACARON: return '마카롱 상점';
+      case ShopType.MARKET: return '베이커리 팝업';
+      case ShopType.ROYAL: return '왕실 베이커리';
+      case ShopType.FINAL: return '천재 파티셰 명예의 베이커리';
     }
   };
 
@@ -458,14 +461,15 @@ export default function App() {
             <a
               href={PORTAL_HOME_URL}
               className="shrink-0 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg border border-[#F4D03F]/50 bg-[#4E342E] text-[#F4D03F] font-sans text-[9px] sm:text-[10px] font-bold tracking-tight hover:bg-[#6D4C41] hover:border-[#F4D03F] transition-colors flex items-center gap-0.5 sm:gap-1 opacity-90 hover:opacity-100"
-              title="로그인클래스 클래스 목록으로 이동"
+              title="로그인교실 교실 목록으로 이동"
             >
               <Home className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" aria-hidden="true" />
-              <span className="whitespace-nowrap">클래스 목록</span>
+              <span className="whitespace-nowrap">교실목록</span>
             </a>
 
             <button
               type="button"
+              onPointerDown={primePixelSFX}
               onClick={handleToggleSfx}
               className={`shrink-0 p-1.5 sm:p-2 rounded-lg border-2 transition-colors flex items-center justify-center ${
                 sfxMuted
@@ -714,14 +718,14 @@ export default function App() {
 
               {/* Distribute 50 stages across 8 unique segmented cards */}
               {[
-                { type: ShopType.COOKIE, label: '🍪 1단계-10단계: 기본 쿠키 상점', bounds: [1, 10], colClass: 'from-amber-500/5 to-amber-700/5' },
-                { type: ShopType.CUPCAKE, label: '🧁 11단계-15단계: 파스텔 컵케이크 상점', bounds: [11, 15], colClass: 'from-pink-500/5 to-rose-700/5' },
-                { type: ShopType.CAKE, label: '🍰 16단계-20단계: 생크림 조각 케이크 상점', bounds: [16, 20], colClass: 'from-red-500/5 to-rose-700/5' },
-                { type: ShopType.DONUT, label: '🍩 21단계-25단계: 수제 글레이즈 도넛 상점', bounds: [21, 25], colClass: 'from-orange-500/5 to-amber-700/5' },
-                { type: ShopType.MACARON, label: '🍬 26단계-30단계: 쫀득 마카롱 상점', bounds: [26, 30], colClass: 'from-purple-500/5 to-fuchsia-700/5' },
-                { type: ShopType.MARKET, label: '🏷️ 31단계-40단계: 할인 배합 아웃렛 마켓', bounds: [31, 40], colClass: 'from-stone-500/5 to-slate-700/5' },
-                { type: ShopType.ROYAL, label: '👑 41단계-45단계: 왕실 궁중 기밀 베이커리', bounds: [41, 45], colClass: 'from-yellow-500/5 to-amber-700/5' },
-                { type: ShopType.FINAL, label: '🎆 46단계-50단계: 천재 파티셰 명예의 베이커리', bounds: [46, 50], colClass: 'from-slate-900/5 to-indigo-950/5' }
+                { type: ShopType.COOKIE, label: '🍪 1~10단계: 쿠키 상점', bounds: [1, 10], colClass: 'from-amber-500/5 to-amber-700/5' },
+                { type: ShopType.CUPCAKE, label: '🧁 11~15단계: 컵케이크 상점', bounds: [11, 15], colClass: 'from-pink-500/5 to-rose-700/5' },
+                { type: ShopType.CAKE, label: '🍰 16~20단계: 케이크 상점', bounds: [16, 20], colClass: 'from-red-500/5 to-rose-700/5' },
+                { type: ShopType.DONUT, label: '🍩 21~25단계: 도넛 상점', bounds: [21, 25], colClass: 'from-orange-500/5 to-amber-700/5' },
+                { type: ShopType.MACARON, label: '🍬 26~30단계: 마카롱 상점', bounds: [26, 30], colClass: 'from-purple-500/5 to-fuchsia-700/5' },
+                { type: ShopType.MARKET, label: '🏷️ 31~40단계: 베이커리 팝업', bounds: [31, 40], colClass: 'from-stone-500/5 to-slate-700/5' },
+                { type: ShopType.ROYAL, label: '👑 41~45단계: 왕실 베이커리', bounds: [41, 45], colClass: 'from-yellow-500/5 to-amber-700/5' },
+                { type: ShopType.FINAL, label: '🎆 46~50단계: 천재 파티셰 명예의 베이커리', bounds: [46, 50], colClass: 'from-slate-900/5 to-indigo-950/5' }
               ].map((group, gIdx) => (
                 <div key={gIdx} className={`rounded-2xl p-3 sm:p-5 border-4 border-[#5D4037] bg-gradient-to-r ${group.colClass} shadow-xs`}>
                   <h3 className="font-display font-extrabold text-[#5D4037] text-xs sm:text-sm md:text-base mb-3 flex items-center justify-between border-b-2 border-dashed border-[#5D4037]/15 pb-2">
@@ -795,6 +799,7 @@ export default function App() {
             const activeBreadIndex = getCurrentBreadIndex(currentStage.id);
             const activeBreadMeta = BREADS_METADATA[activeBreadIndex];
             const activeBreadName = activeBreadMeta ? activeBreadMeta.name : currentStage.representativeMenu;
+            const questionsInStage = getQuestionsPerStage(activeStageId);
 
             return (
               <div className="w-full flex flex-col lg:flex-row gap-6 relative" id="kitchen-tycoon-panel">
@@ -850,11 +855,11 @@ export default function App() {
                   <div className="bg-white/80 border border-amber-200 rounded-xl p-3 flex flex-col gap-1.5 relative z-10 sm:col-span-1" id="kitchen-delivery-progress-status">
                     <div className="flex justify-between items-center text-xs font-sans">
                       <span className="font-bold text-stone-600">주문 접수 완료</span>
-                      <span className="font-mono font-bold text-[#E67E22]">{currentQIndex + 1} / {QUESTIONS_PER_STAGE} 장</span>
+                      <span className="font-mono font-bold text-[#E67E22]">{currentQIndex + 1} / {questionsInStage} 장</span>
                     </div>
 
                     <div className="flex items-center gap-1 mt-0.5">
-                      {Array.from({ length: QUESTIONS_PER_STAGE }).map((_, i) => (
+                      {Array.from({ length: questionsInStage }).map((_, i) => (
                         <div 
                           key={i} 
                           className={`flex-1 h-1.5 rounded-full border border-stone-200/50 ${
@@ -869,7 +874,7 @@ export default function App() {
                     </div>
 
                     <p className="font-sans text-[9px] text-stone-500 leading-tight mt-1">
-                      총 5개의 베이킹 주문을 정확한 비율로 모두 납품하면, 대망의 다음 레벨과 대성공 보너스를 쟁취합니다.
+                      총 {questionsInStage}개의 베이킹 주문을 정확한 비율로 모두 납품하면, 대망의 다음 레벨과 대성공 보너스를 쟁취합니다.
                     </p>
                   </div>
 
@@ -1006,7 +1011,16 @@ export default function App() {
       <footer className="w-full bg-[#EFEBE9] border-t-4 border-[#5D4037] py-6 mt-12 text-center shadow-inner" id="global-tycoon-foot-container">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-3 font-sans text-xs text-[#5D4037] font-bold">
           <span>🎮 PIXEL BAKERY (비와 비율, 백분율 연습용 수학 게임)</span>
-          <span className="text-[#E05A47]">made by 로그린쌤</span>
+          <div className="flex flex-col items-center sm:items-end gap-0.5">
+            <a
+              href={PORTAL_HOME_URL}
+              className="text-[#5D4037] hover:text-[#E05A47] underline underline-offset-2 decoration-[#E05A47]/40 hover:decoration-[#E05A47] transition-colors"
+              title="로그인교실 메인으로 이동"
+            >
+              로그인교실.com
+            </a>
+            <span className="text-[#E05A47]">made by 로그린쌤</span>
+          </div>
         </div>
       </footer>
 

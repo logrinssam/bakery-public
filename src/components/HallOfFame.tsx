@@ -1,8 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { PlayerStats, HallRecord } from '../types';
+import { loadElementarySchools, resolveSchoolName, searchSchools } from '../data/schools';
+import {
+  isFirebaseConfigured,
+  fetchHallRecords,
+  addHallRecordToFirebase,
+  HALL_RECORDS_TOP_LIMIT
+} from '../services/firebaseHall';
+import {
+  subscribeVisitStats,
+  isTeacherStatsEnabled,
+  verifyTeacherPin,
+  type VisitStats
+} from '../services/firebaseVisits';
+import {
+  filterRecordsForPublishedRanking,
+  formatNextRankingPublishLabel,
+  formatRankingPublishLabel,
+  getRankingIntervalDescription,
+  getRankingPublishIntervalHours
+} from '../utils/rankingPublish';
 import { PixelSprite } from './PixelSprite';
 import {
   INPUT_LIMITS,
+  clampHallSubmitStats,
   parseHallRecords,
   sanitizeDisplayText,
   STORAGE_KEYS,
@@ -20,14 +41,45 @@ import {
   Medal, 
   FileText, 
   CheckCircle,
-  HelpCircle
+  HelpCircle,
+  RefreshCw
 } from 'lucide-react';
+
+const HALL_AUTO_REFRESH_MS = 60 * 60 * 1000;
+const HALL_MANUAL_COOLDOWN_MS = 30 * 60 * 1000;
+
+function formatHallClockTime(date: Date | null): string {
+  if (!date) return '—';
+  return new Intl.DateTimeFormat('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: 'Asia/Seoul'
+  }).format(date);
+}
+
+function mergeHallRecords(remote: HallRecord[], local: HallRecord[]): HallRecord[] {
+  const byId = new Map<string, HallRecord>();
+  for (const r of remote) byId.set(r.id, r);
+  for (const r of local) {
+    if (!byId.has(r.id)) byId.set(r.id, r);
+  }
+  return Array.from(byId.values()).sort((a, b) => {
+    if (b.stars !== a.stars) return b.stars - a.stars;
+    if (b.highestStreak !== a.highestStreak) return b.highestStreak - a.highestStreak;
+    const aTime = a.createdAt ? new Date(a.createdAt).getTime() : new Date(a.date).getTime();
+    const bTime = b.createdAt ? new Date(b.createdAt).getTime() : new Date(b.date).getTime();
+    return bTime - aTime;
+  });
+}
 
 interface HallOfFameProps {
   stats: PlayerStats;
   onClose: () => void;
   onRegister: (name: string, school: string, comment: string) => void;
 }
+
+const HALL_RECORDS_KEY = 'pixel_bakery_hall_records_v2';
 
 export const HallOfFame: React.FC<HallOfFameProps> = ({
   stats,
@@ -36,35 +88,128 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
 }) => {
   const [records, setRecords] = useState<HallRecord[]>([]);
   const [userName, setUserName] = useState('');
-  const [schoolName, setSchoolName] = useState('');
+  const [schoolQuery, setSchoolQuery] = useState('');
   const [userComment, setUserComment] = useState('');
+  const [schoolError, setSchoolError] = useState('');
+  const [allowedSchools, setAllowedSchools] = useState<string[]>([]);
+  const [schoolsReady, setSchoolsReady] = useState(false);
   const [registered, setRegistered] = useState(false);
   const [activeTab, setActiveTab] = useState<'individual' | 'school'>('individual');
   const [showCertSuccessMsg, setShowCertSuccessMsg] = useState(false);
+  const [visitStats, setVisitStats] = useState<VisitStats | null>(null);
+  const [showTeacherStats, setShowTeacherStats] = useState(false);
+  const [registering, setRegistering] = useState(false);
+  const [rankingClock, setRankingClock] = useState(() => Date.now());
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
+  const [lastManualRefreshAt, setLastManualRefreshAt] = useState<number | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [uiTick, setUiTick] = useState(() => Date.now());
+  const lastManualRefreshAtRef = useRef<number | null>(null);
 
-  // Sync records from localStorage
   useEffect(() => {
+    const tick = window.setInterval(() => setRankingClock(Date.now()), 30_000);
+    return () => window.clearInterval(tick);
+  }, []);
+
+  useEffect(() => {
+    const needsCooldownTick =
+      lastManualRefreshAt !== null &&
+      Date.now() - lastManualRefreshAt < HALL_MANUAL_COOLDOWN_MS;
+    if (!needsCooldownTick) return;
+    const id = window.setInterval(() => setUiTick(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [lastManualRefreshAt]);
+
+  useEffect(() => {
+    loadElementarySchools().then((list) => {
+      setAllowedSchools(list);
+      setSchoolsReady(true);
+    });
+  }, []);
+
+  const loadLocalRecords = useCallback((): HallRecord[] => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEYS.hallRecords);
-      if (stored) {
-        setRecords(parseHallRecords(JSON.parse(stored)));
-      } else {
-        // Sample legendary records for classroom context
-        const sampleRecords: HallRecord[] = [
-          { id: '1', name: '김민준 파티셰', schoolName: '빛솔초등학교', comment: '비율과 할인율 단원을 완벽 마스터하고 칭호를 따냈습니당!', date: '2026-05-18', stars: 195, highestStreak: 24 },
-          { id: '2', name: '이서윤 꼬마생', schoolName: '새봄초등학교', comment: '50단계까지 도넛이랑 마카롱 굽는 수학 질문 다 맞췄지용! 최고!!', date: '2026-05-20', stars: 180, highestStreak: 12 },
-          { id: '3', name: '수학 천재 레몬', schoolName: '은빛초등학교', comment: '왕실 황금 레시피 다 통과했습니다. 대박 재밌어요!', date: '2026-05-21', stars: 210, highestStreak: 45 },
-          { id: '4', name: '조은혜 꿈나무', schoolName: '빛솔초등학교', comment: '분수 소수 백분율 다 극복하고 명예 등극 완료 헤헤', date: '2026-05-21', stars: 165, highestStreak: 18 },
-          { id: '5', name: '김태우 브레드', schoolName: '은빛초등학교', comment: '할인율 계산하는 상점들 짱 재밌었어요! 전교 1등할래요!', date: '2026-05-21', stars: 175, highestStreak: 15 },
-          { id: '6', name: '박사랑 버터', schoolName: '새봄초등학교', comment: '50관문 클리어!! 드디어 왕실 파티셰 임명장 받았다!', date: '2026-05-21', stars: 160, highestStreak: 10 }
-        ];
-        localStorage.setItem(STORAGE_KEYS.hallRecords, JSON.stringify(sampleRecords));
-        setRecords(sampleRecords);
-      }
+      localStorage.removeItem('pixel_bakery_hall_records');
+      const stored = localStorage.getItem(HALL_RECORDS_KEY);
+      const parsed: HallRecord[] = stored ? parseHallRecords(JSON.parse(stored)) : [];
+      setRecords(parsed);
+      return parsed;
     } catch {
-      // safe fallback
+      setRecords([]);
+      return [];
     }
-  }, [registered]);
+  }, []);
+
+  const persistRecords = useCallback((merged: HallRecord[]) => {
+    setRecords(merged);
+    try {
+      localStorage.setItem(HALL_RECORDS_KEY, JSON.stringify(merged));
+    } catch {
+      // ignore quota
+    }
+    setLastUpdatedAt(new Date());
+  }, []);
+
+  const refreshHallRecords = useCallback(
+    async (options?: { bypassCooldown?: boolean; isManual?: boolean }) => {
+      if (!isFirebaseConfigured()) {
+        loadLocalRecords();
+        return;
+      }
+
+      if (
+        options?.isManual &&
+        !options?.bypassCooldown &&
+        lastManualRefreshAtRef.current !== null &&
+        Date.now() - lastManualRefreshAtRef.current < HALL_MANUAL_COOLDOWN_MS
+      ) {
+        return;
+      }
+
+      setRefreshing(true);
+      setRefreshError(null);
+
+      try {
+        const local = loadLocalRecords();
+        const remote = await fetchHallRecords();
+        const merged = mergeHallRecords(remote, local);
+        persistRecords(merged);
+
+        if (options?.isManual && !options?.bypassCooldown) {
+          const now = Date.now();
+          lastManualRefreshAtRef.current = now;
+          setLastManualRefreshAt(now);
+        }
+      } catch {
+        loadLocalRecords();
+        setRefreshError('목록을 불러오지 못했습니다. 로컬 캐시를 표시합니다.');
+      } finally {
+        setRefreshing(false);
+      }
+    },
+    [loadLocalRecords, persistRecords]
+  );
+
+  useEffect(() => {
+    loadLocalRecords();
+
+    if (!isFirebaseConfigured()) return;
+
+    void refreshHallRecords({ bypassCooldown: true });
+
+    const autoId = window.setInterval(() => {
+      void refreshHallRecords({ bypassCooldown: true });
+    }, HALL_AUTO_REFRESH_MS);
+
+    return () => window.clearInterval(autoId);
+  }, [loadLocalRecords, refreshHallRecords]);
+
+  useEffect(() => {
+    if (!showTeacherStats || !isFirebaseConfigured()) return;
+    const unsub = subscribeVisitStats(setVisitStats);
+    return () => unsub?.();
+  }, [showTeacherStats]);
 
   // Handle Certificate Image Generation & Automatic Download via canvas
   const handleDownloadCertificate = (name: string, school: string, stars: number, streak: number, dateStr: string) => {
@@ -225,43 +370,111 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
     }, 4000);
   };
 
-  const handleRegisterSubmit = (e: React.FormEvent) => {
+  const handleOpenTeacherStats = () => {
+    if (!isTeacherStatsEnabled()) {
+      alert('접속 통계는 VITE_VISITOR_ADMIN_PIN_SHA256 설정 후 사용할 수 있습니다.');
+      return;
+    }
+    const entered = window.prompt('교사용 접속 통계 PIN을 입력하세요.');
+    if (entered === null) return;
+    void verifyTeacherPin(entered).then((ok) => {
+      if (ok) setShowTeacherStats(true);
+      else alert('PIN이 올바르지 않습니다.');
+    });
+  };
+
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const name = sanitizeDisplayText(userName, INPUT_LIMITS.hallName);
-    const school = sanitizeDisplayText(schoolName, INPUT_LIMITS.hallSchool);
-    const comment = sanitizeDisplayText(userComment, INPUT_LIMITS.hallComment);
-    if (!name || !school || !comment) return;
+    setSchoolError('');
 
-    onRegister(name, school, comment);
+    if (!userName.trim() || !schoolQuery.trim() || !userComment.trim()) return;
+    if (registering) return;
+
+    if (!schoolsReady || allowedSchools.length === 0) {
+      setSchoolError(
+        schoolsReady && allowedSchools.length === 0
+          ? '학교 목록 파일이 없습니다. data/elementary-schools.csv 를 넣고 npm run build:schools 실행 후 배포해 주세요.'
+          : '학교 목록을 불러오는 중입니다. 잠시 후 다시 시도해 주세요.'
+      );
+      return;
+    }
+
+    const resolvedSchool = resolveSchoolName(schoolQuery, allowedSchools);
+    if (!resolvedSchool) {
+      setSchoolError('실제 초등학교만 등록할 수 있습니다. 목록에서 학교명을 골라 주세요.');
+      return;
+    }
+
+    const trimmedName = sanitizeDisplayText(userName, INPUT_LIMITS.hallName);
+    const trimmedComment = sanitizeDisplayText(userComment, INPUT_LIMITS.hallComment);
+    if (!trimmedName || !trimmedComment) return;
+
+    setRegistering(true);
+    const recordDate = new Date().toISOString().split('T')[0];
+
+    onRegister(trimmedName, resolvedSchool, trimmedComment);
     setRegistered(true);
+    setSchoolQuery(resolvedSchool);
 
-    // Append to local records immediately
-    const newRecord: HallRecord = {
-      id: Date.now().toString(),
-      name,
-      schoolName: school,
-      comment,
-      date: new Date().toISOString().split('T')[0],
-      stars: stats.starsEarned,
-      highestStreak: stats.highestStreak
+    const createdAt = new Date().toISOString();
+    const { stars, highestStreak } = clampHallSubmitStats(
+      stats.starsEarned,
+      stats.highestStreak
+    );
+    const recordPayload = {
+      name: trimmedName,
+      schoolName: resolvedSchool,
+      comment: trimmedComment,
+      date: recordDate,
+      stars,
+      highestStreak,
+      createdAt
     };
 
-    const updated = [newRecord, ...records];
-    localStorage.setItem(STORAGE_KEYS.hallRecords, JSON.stringify(updated));
-    setRecords(updated);
+    let recordId = Date.now().toString();
+    if (isFirebaseConfigured()) {
+      try {
+        const remoteId = await addHallRecordToFirebase(recordPayload);
+        if (remoteId) recordId = remoteId;
+      } catch {
+        setSchoolError('서버에 등록하지 못했습니다. 인터넷 연결을 확인한 뒤 다시 시도해 주세요.');
+        setRegistering(false);
+        return;
+      }
+    }
 
-    // Auto trigger download for top-tier positive reinforcement
+    const newRecord: HallRecord = { id: recordId, ...recordPayload };
+    const updated = [newRecord, ...records.filter((r) => r.id !== recordId)];
+    persistRecords(updated);
+
+    setRegistering(false);
+
+    if (isFirebaseConfigured()) {
+      await refreshHallRecords({ bypassCooldown: true });
+    }
+
     handleDownloadCertificate(
-      name,
-      school,
-      stats.starsEarned,
-      stats.highestStreak,
-      newRecord.date
+      trimmedName,
+      resolvedSchool,
+      stars,
+      highestStreak,
+      recordDate
     );
   };
 
-  // Aggregated ranks grouped by School Name
-  const getSchoolRanks = () => {
+  const rankingNow = new Date(rankingClock);
+  const publishedRecords = filterRecordsForPublishedRanking(records, rankingNow);
+  const pendingRankingCount = records.length - publishedRecords.length;
+
+  const manualCooldownRemaining =
+    lastManualRefreshAt !== null
+      ? Math.max(0, HALL_MANUAL_COOLDOWN_MS - (uiTick - lastManualRefreshAt))
+      : 0;
+  const canManualRefresh = !refreshing && manualCooldownRemaining === 0;
+  const manualCooldownMinutes = Math.ceil(manualCooldownRemaining / 60_000);
+
+  // Aggregated ranks grouped by School Name (scheduled snapshot only)
+  const getSchoolRanks = (source: HallRecord[]) => {
     const schoolMap: { 
       [key: string]: { 
         schoolName: string; 
@@ -271,7 +484,7 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
       } 
     } = {};
 
-    records.forEach(rec => {
+    source.forEach(rec => {
       const sch = (rec.schoolName || '무소속 파티셰 아카데미').trim();
       if (!schoolMap[sch]) {
         schoolMap[sch] = {
@@ -297,14 +510,15 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
     });
   };
 
-  const isEligibleToRegister = stats.stageProgress >= 50 && !stats.hallOfFameRegistered && !registered;
+  const isEligibleToRegister =
+    stats.stageProgress >= 50 && !stats.hallOfFameRegistered && !registered;
   const isAlreadyRegistered = stats.hallOfFameRegistered || registered;
 
   const currentRegisteredName = stats.hallName || userName;
-  const currentRegisteredSchool = stats.hallSchool || schoolName;
+  const currentRegisteredSchool = stats.hallSchool || schoolQuery;
   const currentRegisteredDate = stats.hallDate || new Date().toISOString().split('T')[0];
 
-  const sortedIndividualRecords = [...records].sort((a, b) => {
+  const sortedIndividualRecords = [...publishedRecords].sort((a, b) => {
     if (b.stars !== a.stars) {
       return b.stars - a.stars;
     }
@@ -316,7 +530,7 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
     return aTime - bTime;
   });
 
-  const schoolRanksList = getSchoolRanks();
+  const schoolRanksList = getSchoolRanks(publishedRecords);
 
   return (
     <div className="w-full flex flex-col gap-6 text-[#5D4037]" id="hall-of-fame-panel-section">
@@ -335,22 +549,115 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
           </button>
           <div>
             <h1 className="font-display font-black text-[#5D4037] text-2xl md:text-3xl tracking-tight">🏆 수학 마스터 파티셰 전당</h1>
-            <p className="font-sans text-xs text-stone-500 font-medium mt-1">50단계 최종 시그니처 베이커리를 완성한 천재 파티셰들과 최고의 명문 베이커리 학교 연합입니다.</p>
+            <p className="font-sans text-xs text-stone-500 font-medium mt-1">
+              50단계 최종 시그니처 베이커리를 완성한 천재 파티셰들의 명단·학교 순위는{' '}
+              <span className="text-amber-800">{getRankingIntervalDescription(rankingNow)}</span> 공개됩니다.
+              (현재 {getRankingPublishIntervalHours(rankingNow)}시간 주기 · 7일마다 주기가 1시간씩 늘어납니다)
+            </p>
           </div>
         </div>
 
+        <div className="w-full bg-amber-50/80 border-2 border-amber-200 rounded-2xl px-4 py-3 flex flex-col gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <p className="font-sans text-xs font-bold text-amber-900 flex items-center gap-2">
+              <Calendar className="w-4 h-4 shrink-0" />
+              {formatRankingPublishLabel(rankingNow)}
+            </p>
+            <p className="font-sans text-[11px] font-bold text-stone-600">
+              {formatNextRankingPublishLabel(rankingNow)}
+              {pendingRankingCount > 0 && (
+                <span className="text-amber-800"> · 다음 공개에 반영 예정 {pendingRankingCount}명</span>
+              )}
+            </p>
+          </div>
+          {isFirebaseConfigured() && (
+            <div className="flex flex-col xs:flex-row flex-wrap items-stretch xs:items-center gap-2 pt-1 border-t border-amber-200/80">
+              <span className="font-sans text-[11px] font-bold text-stone-600">
+                마지막 업데이트 {formatHallClockTime(lastUpdatedAt)}
+                <span className="text-stone-400 font-medium">
+                  {' '}
+                  · 서버 상위 {HALL_RECORDS_TOP_LIMIT}명 · 1시간마다 자동 갱신
+                </span>
+              </span>
+              <button
+                type="button"
+                disabled={!canManualRefresh}
+                onClick={() => void refreshHallRecords({ isManual: true })}
+                className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl border-2 font-sans text-[11px] font-black transition-all ${
+                  canManualRefresh
+                    ? 'bg-white border-[#5D4037] text-[#5D4037] hover:bg-[#FFF4E0] cursor-pointer'
+                    : 'bg-stone-100 border-stone-300 text-stone-400 cursor-not-allowed'
+                }`}
+                title="Firestore에서 명단 다시 불러오기"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+                {refreshing
+                  ? '불러오는 중…'
+                  : manualCooldownRemaining > 0
+                    ? `${manualCooldownMinutes}분 후 가능`
+                    : '목록 새로고침'}
+              </button>
+              {refreshError && (
+                <span className="font-sans text-[10px] text-red-600 font-bold">{refreshError}</span>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Level summary badges */}
-        <div className="flex gap-2.5 items-center text-xs">
+        <div className="flex flex-wrap gap-2.5 items-center text-xs">
           <div className="bg-[#FFF4E0] border-4 border-[#5D4037] text-[#5D4037] rounded-2xl px-5 py-2 font-display font-black flex items-center gap-2 shadow-sm">
             <Trophy className="w-4 h-4 text-[#F4D03F]" />
-            전원 누적 등재 완료: {records.length}명
+            공개 명단: {publishedRecords.length}명
+            {records.length > publishedRecords.length && (
+              <span className="text-[9px] font-sans font-bold text-stone-500">
+                (전체 등록 {records.length}명)
+              </span>
+            )}
           </div>
           <div className="bg-amber-100 border-4 border-[#5D4037] text-[#5D4037] rounded-2xl px-5 py-2 font-display font-black flex items-center gap-2 shadow-sm">
             <School className="w-4 h-4 text-amber-700" />
             참가 베이커리 학교수: {schoolRanksList.length}개교
           </div>
+          {isFirebaseConfigured() && isTeacherStatsEnabled() && (
+            <button
+              type="button"
+              onClick={handleOpenTeacherStats}
+              className="bg-slate-100 border-4 border-[#5D4037] text-[#5D4037] rounded-2xl px-4 py-2 font-display font-black flex items-center gap-2 shadow-sm hover:bg-slate-200 transition-colors cursor-pointer"
+              title="교사용 접속 통계"
+            >
+              <Users className="w-4 h-4" />
+              접속 통계
+            </button>
+          )}
         </div>
       </div>
+
+      {showTeacherStats && (
+        <div className="bg-slate-50 border-4 border-[#5D4037] rounded-2xl p-4 flex flex-wrap gap-4 items-center justify-between">
+          <div>
+            <p className="font-display font-black text-sm text-[#5D4037]">📊 교사용 접속 누계 (Firebase)</p>
+            <p className="text-[10px] font-sans text-stone-500 mt-0.5">
+              브라우저 탭을 새로 열 때마다 세션 1회, 기기당 최초 1회만 고유 접속으로 집계합니다.
+            </p>
+          </div>
+          <div className="flex gap-3 text-xs font-display font-black">
+            <span className="bg-white border-2 border-[#5D4037] rounded-xl px-4 py-2">
+              누적 접속(세션): {(visitStats?.totalSessions ?? 0).toLocaleString()}회
+            </span>
+            <span className="bg-white border-2 border-[#5D4037] rounded-xl px-4 py-2">
+              접속한 기기(추정 인원): {(visitStats?.uniqueDevices ?? 0).toLocaleString()}대
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowTeacherStats(false)}
+            className="text-[10px] font-sans font-bold text-stone-500 underline cursor-pointer"
+          >
+            닫기
+          </button>
+        </div>
+      )}
 
       {/* [Feature addition] Live Certificate Preview Mockup Section */}
       <div className="bg-amber-50/40 border-4 border-[#8D6E63] rounded-3xl p-6 shadow-xs flex flex-col gap-4">
@@ -383,7 +690,7 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
           <div className="text-left font-sans text-stone-700 text-xs font-black max-w-sm mx-auto mb-6 flex flex-col gap-1 px-4 leading-relaxed">
             <div className="flex border-b border-dashed border-stone-200 py-1">
               <span className="w-16 text-stone-400">소 &nbsp; 속:</span> 
-              <span className="text-[#5D4037]">{currentRegisteredSchool || '빛솔 베이커리 초등학교'}</span>
+              <span className="text-[#5D4037]">{currentRegisteredSchool || '우리 학교'}</span>
             </div>
             <div className="flex border-b border-dashed border-stone-200 py-1">
               <span className="w-16 text-stone-400">성 &nbsp; 명:</span> 
@@ -446,17 +753,34 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="font-sans text-xs text-stone-500 font-bold" htmlFor="fame-school">🏫 과학/초등 학교명 입력</label>
+                <label className="font-sans text-xs text-stone-500 font-bold" htmlFor="fame-school">🏫 초등학교명 (목록에서 선택)</label>
                 <input
                   type="text"
                   id="fame-school"
-                  value={schoolName}
-                  onChange={(e) => setSchoolName(e.target.value)}
+                  list="fame-school-suggestions"
+                  value={schoolQuery}
+                  onChange={(e) => {
+                    setSchoolQuery(e.target.value);
+                    setSchoolError('');
+                  }}
                   maxLength={INPUT_LIMITS.hallSchool}
-                  placeholder="예: 빛솔초등학교"
+                  placeholder={schoolsReady ? '학교명 입력 후 목록에서 선택' : '학교 목록 불러오는 중...'}
+                  autoComplete="off"
                   required
-                  className="bg-white border-4 border-[#5D4037] rounded-2xl px-4 py-3 font-sans text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#FF85A1]/20 shadow-sm"
+                  disabled={!schoolsReady}
+                  className="bg-white border-4 border-[#5D4037] rounded-2xl px-4 py-3 font-sans text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#FF85A1]/20 shadow-sm disabled:opacity-60"
                 />
+                <datalist id="fame-school-suggestions">
+                  {searchSchools(schoolQuery, allowedSchools, 15).map((school) => (
+                    <option key={school} value={school} />
+                  ))}
+                </datalist>
+                {schoolError && (
+                  <p className="font-sans text-[11px] text-red-600 font-bold">{schoolError}</p>
+                )}
+                {schoolsReady && allowedSchools.length > 0 && (
+                  <p className="font-sans text-[10px] text-stone-500">전국 실제 초등학교 {allowedSchools.length.toLocaleString()}곳 중에서만 등록됩니다.</p>
+                )}
               </div>
 
               <div className="flex flex-col gap-1.5">
@@ -490,10 +814,11 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
 
             <button
               type="submit"
-              className="btn-pixel-yellow px-6 py-4 rounded-2xl text-center cursor-pointer flex items-center justify-center gap-2 mt-2 font-display text-sm font-black w-full"
+              disabled={registering}
+              className="btn-pixel-yellow px-6 py-4 rounded-2xl text-center cursor-pointer flex items-center justify-center gap-2 mt-2 font-display text-sm font-black w-full disabled:opacity-60"
             >
               <Award className="w-5 h-5 text-[#5D4037]" />
-              서명 등록 신청 & 명예 인증서 즉시 다운로드
+              {registering ? '서버에 등록 중…' : '서명 등록 신청 & 명예 인증서 즉시 다운로드'}
             </button>
           </div>
         </form>
@@ -568,7 +893,7 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
           }`}
         >
           <School className="w-4 h-4" />
-          🏫 학교 대항전 순위 (실시간)
+          🏫 학교 대항전 순위
         </button>
       </div>
 
@@ -578,14 +903,22 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
           <div className="flex justify-between items-center bg-amber-50/50 p-4 rounded-2xl border-2 border-dashed border-amber-200">
             <h2 className="font-display font-black text-[#5D4037] text-lg flex items-center gap-2">
               <Trophy className="w-5 h-5 text-[#F4D03F]" />
-              현재 서약된 수석 파티셰 동명단 ({sortedIndividualRecords.length}명)
+              현재 서약된 수석 파티셰 명단 ({sortedIndividualRecords.length}명)
             </h2>
             <span className="font-sans text-[10px] text-amber-800 font-bold">⭐ 높은 별점 우선 정렬</span>
           </div>
 
           {sortedIndividualRecords.length === 0 ? (
-            <div className="text-center py-16 bg-white rounded-3xl border-4 border-[#5D4037] text-stone-400 font-sans text-sm font-bold">
-              등록된 명예로운 인물이 아직 없습니다. 50단계를 클리어하여 최초의 전설이 되어 보세요!
+            <div className="text-center py-16 bg-white rounded-3xl border-4 border-[#5D4037] text-stone-400 font-sans text-sm font-bold leading-relaxed">
+              {records.length > 0 && pendingRankingCount > 0 ? (
+                <>
+                  아직 이번 시간대 공개 랭킹에 올라온 인물이 없거나, 최근 등록한 분은 다음 갱신에 반영됩니다.
+                  <br />
+                  <span className="text-amber-700 text-xs mt-2 inline-block">{formatNextRankingPublishLabel(rankingNow)}</span>
+                </>
+              ) : (
+                <>등록된 명예로운 인물이 아직 없습니다. 50단계를 클리어하여 최초의 전설이 되어 보세요!</>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4" id="leaders-scroll-area">
@@ -709,16 +1042,26 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
             <div>
               <h2 className="font-display font-black text-[#5D4037] text-lg flex items-center gap-2">
                 <School className="w-5 h-5 text-emerald-700" />
-                🏫 전국 학교대항 베이커리 리그 (실시간 집계)
+                🏫 전국 학교대항 베이커리 리그
               </h2>
-              <p className="font-sans text-[11px] text-stone-500 font-medium">학교별 단체 50단계 정복 인원수를 합계하여 순위가 산정됩니다. 동점 시 누적 획득한 별 개수가 많은 우수 학교가 차지합니다.</p>
+              <p className="font-sans text-[11px] text-stone-500 font-medium">
+                {getRankingIntervalDescription(rankingNow)} 공개되는 명단 기준으로, 학교별 50단계 정복 인원과 별 개수로 순위가 정해집니다.
+              </p>
             </div>
             <span className="font-sans text-[10px] bg-emerald-100 text-emerald-800 border-2 border-emerald-200 font-bold px-2 py-1 rounded-lg">🏫 등록 인원 순 정렬</span>
           </div>
 
           {schoolRanksList.length === 0 ? (
-            <div className="text-center py-16 bg-white rounded-3xl border-4 border-[#5D4037] text-stone-400 font-sans text-sm font-bold">
-              학교 대항전에 참여한 학교 정보가 아직 비어있습니다. 본인의 이름과 학교 소속을 추가하여 학교를 1등으로 이끌어가 주세요!
+            <div className="text-center py-16 bg-white rounded-3xl border-4 border-[#5D4037] text-stone-400 font-sans text-sm font-bold leading-relaxed">
+              {records.length > 0 && pendingRankingCount > 0 ? (
+                <>
+                  학교 순위는 {getRankingIntervalDescription(rankingNow)} 갱신됩니다. 최근 등록분은 다음 공개에 반영됩니다.
+                  <br />
+                  <span className="text-emerald-700 text-xs mt-2 inline-block">{formatNextRankingPublishLabel(rankingNow)}</span>
+                </>
+              ) : (
+                <>학교 대항전에 참여한 학교 정보가 아직 비어있습니다. 본인의 이름과 학교 소속을 추가하여 학교를 1등으로 이끌어가 주세요!</>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4" id="schools-list-container">

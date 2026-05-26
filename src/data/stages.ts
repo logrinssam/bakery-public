@@ -2,73 +2,80 @@ import { Stage, ShopType, MathQuestion, QuestionCategory } from '../types';
 
 export const STAGES: Stage[] = [
   // 1-10 Cookie Shop
-  { id: 1, name: '기본 쿠키 상점', representativeMenu: '기본 라운드 쿠키', shopType: ShopType.COOKIE, backgroundImage: '/assets/shops/shop_cookie.png', requiredStars: 0, goldMultiplier: 1.0, theme: '기본 비의 성질' },
-  { id: 2, name: '버터 쿠키 상점', representativeMenu: '버터 쿠키', shopType: ShopType.COOKIE, backgroundImage: '/assets/shops/shop_cookie.png', requiredStars: 3, goldMultiplier: 1.1, theme: '기본 비의 성질' },
-  { id: 3, name: '초코칩 쿠키 상점', representativeMenu: '초코칩 쿠키', shopType: ShopType.COOKIE, backgroundImage: '/assets/shops/shop_cookie.png', requiredStars: 6, goldMultiplier: 1.2, theme: '상대적 비의 개념' },
-  { id: 4, name: '딸기잼 쿠키 상점', representativeMenu: '딸기잼 쿠키', shopType: ShopType.COOKIE, backgroundImage: '/assets/shops/shop_cookie.png', requiredStars: 9, goldMultiplier: 1.3, theme: '기준량과 비교하는 양' },
-  { id: 5, name: '바닐라 쿠키 상점', representativeMenu: '바닐라 쿠키', shopType: ShopType.COOKIE, backgroundImage: '/assets/shops/shop_cookie.png', requiredStars: 12, goldMultiplier: 1.4, theme: '비의 문장 표현' },
-  { id: 6, name: '시나몬 쿠키 상점', representativeMenu: '시나몬 쿠키', shopType: ShopType.COOKIE, backgroundImage: '/assets/shops/shop_cookie.png', requiredStars: 15, goldMultiplier: 1.5, theme: '기준량 찾기' },
-  { id: 7, name: '곰돌이 쿠키 상점', representativeMenu: '모양 쿠키', shopType: ShopType.COOKIE, backgroundImage: '/assets/shops/shop_cookie.png', requiredStars: 18, goldMultiplier: 1.6, theme: '비료와 기준값' },
-  { id: 8, name: '별사탕 쿠키 상점', representativeMenu: '별 쿠키', shopType: ShopType.COOKIE, backgroundImage: '/assets/shops/shop_cookie.png', requiredStars: 21, goldMultiplier: 1.7, theme: '비교하는 양 찾기' },
-  { id: 9, name: '선물 쿠키 상점', representativeMenu: '쿠키 박스', shopType: ShopType.COOKIE, backgroundImage: '/assets/shops/shop_cookie.png', requiredStars: 24, goldMultiplier: 1.8, theme: '비의 응용' },
-  { id: 10, name: '쿠키 페스티벌', representativeMenu: '쿠키 세트', shopType: ShopType.COOKIE, backgroundImage: '/assets/shops/shop_cookie.png', requiredStars: 27, goldMultiplier: 2.0, theme: '비 단원 종합' },
+  { id: 1, name: '쿠키 상점 1', representativeMenu: '기본 라운드 쿠키', shopType: ShopType.COOKIE, backgroundImage: '/assets/shops/shop_cookie.png', requiredStars: 0, goldMultiplier: 1.0, theme: '기본 비의 성질' },
+  { id: 2, name: '쿠키 상점 2', representativeMenu: '버터 쿠키', shopType: ShopType.COOKIE, backgroundImage: '/assets/shops/shop_cookie.png', requiredStars: 3, goldMultiplier: 1.1, theme: '기본 비의 성질' },
+  { id: 3, name: '쿠키 상점 3', representativeMenu: '초코칩 쿠키', shopType: ShopType.COOKIE, backgroundImage: '/assets/shops/shop_cookie.png', requiredStars: 6, goldMultiplier: 1.2, theme: '상대적 비의 개념' },
+  { id: 4, name: '쿠키 상점 4', representativeMenu: '딸기잼 쿠키', shopType: ShopType.COOKIE, backgroundImage: '/assets/shops/shop_cookie.png', requiredStars: 9, goldMultiplier: 1.3, theme: '기준량과 비교하는 양' },
+  { id: 5, name: '쿠키 상점 5', representativeMenu: '바닐라 쿠키', shopType: ShopType.COOKIE, backgroundImage: '/assets/shops/shop_cookie.png', requiredStars: 12, goldMultiplier: 1.4, theme: '비의 문장 표현' },
+  { id: 6, name: '쿠키 상점 6', representativeMenu: '시나몬 쿠키', shopType: ShopType.COOKIE, backgroundImage: '/assets/shops/shop_cookie.png', requiredStars: 15, goldMultiplier: 1.5, theme: '기준량 찾기' },
+  { id: 7, name: '쿠키 상점 7', representativeMenu: '모양 쿠키', shopType: ShopType.COOKIE, backgroundImage: '/assets/shops/shop_cookie.png', requiredStars: 18, goldMultiplier: 1.6, theme: '비료와 기준값' },
+  { id: 8, name: '쿠키 상점 8', representativeMenu: '별 쿠키', shopType: ShopType.COOKIE, backgroundImage: '/assets/shops/shop_cookie.png', requiredStars: 21, goldMultiplier: 1.7, theme: '비교하는 양 찾기' },
+  { id: 9, name: '쿠키 상점 9', representativeMenu: '쿠키 박스', shopType: ShopType.COOKIE, backgroundImage: '/assets/shops/shop_cookie.png', requiredStars: 24, goldMultiplier: 1.8, theme: '비의 응용' },
+  { id: 10, name: '쿠키 상점 10', representativeMenu: '쿠키 세트', shopType: ShopType.COOKIE, backgroundImage: '/assets/shops/shop_cookie.png', requiredStars: 27, goldMultiplier: 2.0, theme: '비 단원 종합' },
 
-  // 11-15 Cupcake Shop
-  { id: 11, name: '바닐라 컵케이크 상점', representativeMenu: '바닐라 컵케이크', shopType: ShopType.CUPCAKE, backgroundImage: '/assets/shops/shop_cupcake.png', requiredStars: 30, goldMultiplier: 2.2, theme: '비율의 기호 표현' },
-  { id: 12, name: '딸기 컵케이크 상점', representativeMenu: '딸기 컵케이크', shopType: ShopType.CUPCAKE, backgroundImage: '/assets/shops/shop_cupcake.png', requiredStars: 33, goldMultiplier: 2.4, theme: '비율을 분수로 나타내기' },
-  { id: 13, name: '초코 컵케이크 상점', representativeMenu: '초코 컵케이크', shopType: ShopType.CUPCAKE, backgroundImage: '/assets/shops/shop_cupcake.png', requiredStars: 36, goldMultiplier: 2.6, theme: '전체에 대한 부분의 비율' },
-  { id: 14, name: '생크림 컵케이크 상점', representativeMenu: '생크림 컵케이크', shopType: ShopType.CUPCAKE, backgroundImage: '/assets/shops/shop_cupcake.png', requiredStars: 39, goldMultiplier: 2.8, theme: '두 수의 크기 비교 비율' },
-  { id: 15, name: '컵케이크 파티', representativeMenu: '컵케이크 세트', shopType: ShopType.CUPCAKE, backgroundImage: '/assets/shops/shop_cupcake.png', requiredStars: 42, goldMultiplier: 3.1, theme: '분수 비율 마스터' },
+  // 11-15 컵케이크 상점
+  { id: 11, name: '컵케이크 상점 1', representativeMenu: '바닐라 컵케이크', shopType: ShopType.CUPCAKE, backgroundImage: '/assets/shops/shop_cupcake.png', requiredStars: 30, goldMultiplier: 2.2, theme: '비율의 기호 표현' },
+  { id: 12, name: '컵케이크 상점 2', representativeMenu: '딸기 컵케이크', shopType: ShopType.CUPCAKE, backgroundImage: '/assets/shops/shop_cupcake.png', requiredStars: 33, goldMultiplier: 2.4, theme: '비율을 분수로 나타내기' },
+  { id: 13, name: '컵케이크 상점 3', representativeMenu: '초코 컵케이크', shopType: ShopType.CUPCAKE, backgroundImage: '/assets/shops/shop_cupcake.png', requiredStars: 36, goldMultiplier: 2.6, theme: '전체에 대한 부분의 비율' },
+  { id: 14, name: '컵케이크 상점 4', representativeMenu: '생크림 컵케이크', shopType: ShopType.CUPCAKE, backgroundImage: '/assets/shops/shop_cupcake.png', requiredStars: 39, goldMultiplier: 2.8, theme: '두 수의 크기 비교 비율' },
+  { id: 15, name: '컵케이크 상점 5', representativeMenu: '컵케이크 세트', shopType: ShopType.CUPCAKE, backgroundImage: '/assets/shops/shop_cupcake.png', requiredStars: 42, goldMultiplier: 3.1, theme: '분수 비율 마스터' },
 
-  // 16-20 Cake Shop
-  { id: 16, name: '생크림 케이크 상점', representativeMenu: '생크림 케이크', shopType: ShopType.CAKE, backgroundImage: '/assets/shops/shop_cake.png', requiredStars: 45, goldMultiplier: 3.4, theme: '비율을 소수로 나타내기' },
-  { id: 17, name: '딸기 케이크 상점', representativeMenu: '딸기 케이크', shopType: ShopType.CAKE, backgroundImage: '/assets/shops/shop_cake.png', requiredStars: 48, goldMultiplier: 3.7, theme: '소수 비율 계산' },
-  { id: 18, name: '초코 케이크 상점', representativeMenu: '초코 케이크', shopType: ShopType.CAKE, backgroundImage: '/assets/shops/shop_cake.png', requiredStars: 51, goldMultiplier: 4.0, theme: '기준량이 100일 때의 비율' },
-  { id: 19, name: '과일 케이크 상점', representativeMenu: '과일 케이크', shopType: ShopType.CAKE, backgroundImage: '/assets/shops/shop_cake.png', requiredStars: 54, goldMultiplier: 4.4, theme: '실생활 소수 비율 응용' },
-  { id: 20, name: '케이크 대회장', representativeMenu: '케이크 세트', shopType: ShopType.CAKE, backgroundImage: '/assets/shops/shop_cake.png', requiredStars: 57, goldMultiplier: 4.8, theme: '비율 소수 마스터' },
+  // 16-20 케이크 상점
+  { id: 16, name: '케이크 상점 1', representativeMenu: '생크림 케이크', shopType: ShopType.CAKE, backgroundImage: '/assets/shops/shop_cake.png', requiredStars: 45, goldMultiplier: 3.4, theme: '비율을 소수로 나타내기' },
+  { id: 17, name: '케이크 상점 2', representativeMenu: '딸기 케이크', shopType: ShopType.CAKE, backgroundImage: '/assets/shops/shop_cake.png', requiredStars: 48, goldMultiplier: 3.7, theme: '소수 비율 계산' },
+  { id: 18, name: '케이크 상점 3', representativeMenu: '초코 케이크', shopType: ShopType.CAKE, backgroundImage: '/assets/shops/shop_cake.png', requiredStars: 51, goldMultiplier: 4.0, theme: '기준량이 100일 때의 비율' },
+  { id: 19, name: '케이크 상점 4', representativeMenu: '과일 케이크', shopType: ShopType.CAKE, backgroundImage: '/assets/shops/shop_cake.png', requiredStars: 54, goldMultiplier: 4.4, theme: '실생활 소수 비율 응용' },
+  { id: 20, name: '케이크 상점 5', representativeMenu: '케이크 세트', shopType: ShopType.CAKE, backgroundImage: '/assets/shops/shop_cake.png', requiredStars: 57, goldMultiplier: 4.8, theme: '비율 소수 마스터' },
 
-  // 21-25 Donut Shop
-  { id: 21, name: '기본 도넛 상점', representativeMenu: '기본 도넛', shopType: ShopType.DONUT, backgroundImage: '/assets/shops/shop_donut.png', requiredStars: 60, goldMultiplier: 5.2, theme: '백분율의 의미와 기호' },
-  { id: 22, name: '글레이즈 도넛 상점', representativeMenu: '글레이즈 도넛', shopType: ShopType.DONUT, backgroundImage: '/assets/shops/shop_donut.png', requiredStars: 63, goldMultiplier: 5.6, theme: '비율을 백분율로 바꾸기' },
-  { id: 23, name: '초코 도넛 상점', representativeMenu: '초코 도넛', shopType: ShopType.DONUT, backgroundImage: '/assets/shops/shop_donut.png', requiredStars: 66, goldMultiplier: 6.0, theme: '백분율을 소수/분수로 바꾸기' },
-  { id: 24, name: '스프링클 도넛 상점', representativeMenu: '스프링클 도넛', shopType: ShopType.DONUT, backgroundImage: '/assets/shops/shop_donut.png', requiredStars: 69, goldMultiplier: 6.5, theme: '전체의 백분율 구하기' },
-  { id: 25, name: '도넛 박스 상점', representativeMenu: '도넛 박스', shopType: ShopType.DONUT, backgroundImage: '/assets/shops/shop_donut.png', requiredStars: 72, goldMultiplier: 7.0, theme: '백분율 마스터' },
+  // 21-25 도넛 상점
+  { id: 21, name: '도넛 상점 1', representativeMenu: '기본 도넛', shopType: ShopType.DONUT, backgroundImage: '/assets/shops/shop_donut.png', requiredStars: 60, goldMultiplier: 5.2, theme: '백분율의 의미와 기호' },
+  { id: 22, name: '도넛 상점 2', representativeMenu: '글레이즈 도넛', shopType: ShopType.DONUT, backgroundImage: '/assets/shops/shop_donut.png', requiredStars: 63, goldMultiplier: 5.6, theme: '비율을 백분율로 바꾸기' },
+  { id: 23, name: '도넛 상점 3', representativeMenu: '초코 도넛', shopType: ShopType.DONUT, backgroundImage: '/assets/shops/shop_donut.png', requiredStars: 66, goldMultiplier: 6.0, theme: '백분율을 소수/분수로 바꾸기' },
+  { id: 24, name: '도넛 상점 4', representativeMenu: '스프링클 도넛', shopType: ShopType.DONUT, backgroundImage: '/assets/shops/shop_donut.png', requiredStars: 69, goldMultiplier: 6.5, theme: '전체의 백분율 구하기' },
+  { id: 25, name: '도넛 상점 5', representativeMenu: '도넛 박스', shopType: ShopType.DONUT, backgroundImage: '/assets/shops/shop_donut.png', requiredStars: 72, goldMultiplier: 7.0, theme: '백분율 마스터' },
 
-  // 26-30 Macaron Shop
-  { id: 26, name: '딸기 마카롱 상점', representativeMenu: '딸기 마카롱', shopType: ShopType.MACARON, backgroundImage: '/assets/shops/shop_macaron.png', requiredStars: 75, goldMultiplier: 7.6, theme: '백분율로 비교하는 양 구하기' },
-  { id: 27, name: '민트 마카롱 상점', representativeMenu: '민트 마카롱', shopType: ShopType.MACARON, backgroundImage: '/assets/shops/shop_macaron.png', requiredStars: 78, goldMultiplier: 8.2, theme: '백분율과 실제 수량' },
-  { id: 28, name: '초코 마카롱 상점', representativeMenu: '초코 마카롱', shopType: ShopType.MACARON, backgroundImage: '/assets/shops/shop_macaron.png', requiredStars: 81, goldMultiplier: 8.8, theme: '비율을 통한 양의 배분' },
-  { id: 29, name: '선물 마카롱 상점', representativeMenu: '마카롱 박스', shopType: ShopType.MACARON, backgroundImage: '/assets/shops/shop_macaron.png', requiredStars: 84, goldMultiplier: 9.5, theme: '여러 성분의 비율 관계' },
-  { id: 30, name: '디저트 박람회', representativeMenu: '디저트 세트', shopType: ShopType.MACARON, backgroundImage: '/assets/shops/shop_macaron.png', requiredStars: 87, goldMultiplier: 10.2, theme: '마카롱 비율 마스터' },
+  // 26-30 마카롱 상점
+  { id: 26, name: '마카롱 상점 1', representativeMenu: '딸기 마카롱', shopType: ShopType.MACARON, backgroundImage: '/assets/shops/shop_macaron.png', requiredStars: 75, goldMultiplier: 7.6, theme: '백분율로 비교하는 양 구하기' },
+  { id: 27, name: '마카롱 상점 2', representativeMenu: '민트 마카롱', shopType: ShopType.MACARON, backgroundImage: '/assets/shops/shop_macaron.png', requiredStars: 78, goldMultiplier: 8.2, theme: '백분율과 실제 수량' },
+  { id: 28, name: '마카롱 상점 3', representativeMenu: '초코 마카롱', shopType: ShopType.MACARON, backgroundImage: '/assets/shops/shop_macaron.png', requiredStars: 81, goldMultiplier: 8.8, theme: '비율을 통한 양의 배분' },
+  { id: 29, name: '마카롱 상점 4', representativeMenu: '마카롱 박스', shopType: ShopType.MACARON, backgroundImage: '/assets/shops/shop_macaron.png', requiredStars: 84, goldMultiplier: 9.5, theme: '여러 성분의 비율 관계' },
+  { id: 30, name: '마카롱 상점 5', representativeMenu: '디저트 세트', shopType: ShopType.MACARON, backgroundImage: '/assets/shops/shop_macaron.png', requiredStars: 87, goldMultiplier: 10.2, theme: '마카롱 비율 마스터' },
 
-  // 31-40 Discount Market
-  { id: 31, name: '할인 쿠키 마켓', representativeMenu: '할인 쿠키 세트', shopType: ShopType.MARKET, backgroundImage: '/assets/shops/shop_market.png', requiredStars: 90, goldMultiplier: 11.0, theme: '할인율 계산 원리' },
-  { id: 32, name: '할인 케이크 마켓', representativeMenu: '할인 케이크', shopType: ShopType.MARKET, backgroundImage: '/assets/shops/shop_market.png', requiredStars: 94, goldMultiplier: 11.8, theme: '인하된 판매가격 구하기' },
-  { id: 33, name: '쿠폰 베이커리', representativeMenu: '쿠폰 상품', shopType: ShopType.MARKET, backgroundImage: '/assets/shops/shop_market.png', requiredStars: 98, goldMultiplier: 12.6, theme: '쿠폰 할인가 계산' },
-  { id: 34, name: '오전 세일 상점', representativeMenu: '세일 빵', shopType: ShopType.MARKET, backgroundImage: '/assets/shops/shop_market.png', requiredStars: 102, goldMultiplier: 13.5, theme: '할인율 역산하기' },
-  { id: 35, name: '오후 세일 상점', representativeMenu: '세일 세트', shopType: ShopType.MARKET, backgroundImage: '/assets/shops/shop_market.png', requiredStars: 106, goldMultiplier: 14.5, theme: '세트 할인율 비교' },
-  { id: 36, name: '인기 메뉴 상점', representativeMenu: '인기 메뉴', shopType: ShopType.MARKET, backgroundImage: '/assets/shops/shop_market.png', requiredStars: 110, goldMultiplier: 15.5, theme: '증가율과 감소율' },
-  { id: 37, name: '재고 정리 상점', representativeMenu: '재고 상품', shopType: ShopType.MARKET, backgroundImage: '/assets/shops/shop_market.png', requiredStars: 114, goldMultiplier: 16.6, theme: '원가와 할인가 비율' },
-  { id: 38, name: '프리미엄 세트 상점', representativeMenu: '프리미엄 세트', shopType: ShopType.MARKET, backgroundImage: '/assets/shops/shop_market.png', requiredStars: 118, goldMultiplier: 17.8, theme: '복수 할인 적용' },
-  { id: 39, name: '단골 쿠폰 상점', representativeMenu: '단골 세트', shopType: ShopType.MARKET, backgroundImage: '/assets/shops/shop_market.png', requiredStars: 122, goldMultiplier: 19.0, theme: '할인 금액과 할인율 관계' },
-  { id: 40, name: '백분율 마스터 마켓', representativeMenu: '마스터 세트', shopType: ShopType.MARKET, backgroundImage: '/assets/shops/shop_market.png', requiredStars: 126, goldMultiplier: 20.5, theme: '비율과 백분율 마스터' },
+  // 31-40 베이커리 팝업
+  { id: 31, name: '베이커리 팝업 1', representativeMenu: '할인 쿠키 세트', shopType: ShopType.MARKET, backgroundImage: '/assets/shops/shop_market.png', requiredStars: 90, goldMultiplier: 11.0, theme: '할인율 계산 원리' },
+  { id: 32, name: '베이커리 팝업 2', representativeMenu: '할인 케이크', shopType: ShopType.MARKET, backgroundImage: '/assets/shops/shop_market.png', requiredStars: 94, goldMultiplier: 11.8, theme: '인하된 판매가격 구하기' },
+  { id: 33, name: '베이커리 팝업 3', representativeMenu: '쿠폰 상품', shopType: ShopType.MARKET, backgroundImage: '/assets/shops/shop_market.png', requiredStars: 98, goldMultiplier: 12.6, theme: '쿠폰 할인가 계산' },
+  { id: 34, name: '베이커리 팝업 4', representativeMenu: '세일 빵', shopType: ShopType.MARKET, backgroundImage: '/assets/shops/shop_market.png', requiredStars: 102, goldMultiplier: 13.5, theme: '할인율 역산하기' },
+  { id: 35, name: '베이커리 팝업 5', representativeMenu: '세일 세트', shopType: ShopType.MARKET, backgroundImage: '/assets/shops/shop_market.png', requiredStars: 106, goldMultiplier: 14.5, theme: '세트 할인율 비교' },
+  { id: 36, name: '베이커리 팝업 6', representativeMenu: '인기 메뉴', shopType: ShopType.MARKET, backgroundImage: '/assets/shops/shop_market.png', requiredStars: 110, goldMultiplier: 15.5, theme: '증가율과 감소율' },
+  { id: 37, name: '베이커리 팝업 7', representativeMenu: '재고 상품', shopType: ShopType.MARKET, backgroundImage: '/assets/shops/shop_market.png', requiredStars: 114, goldMultiplier: 16.6, theme: '원가와 할인가 비율' },
+  { id: 38, name: '베이커리 팝업 8', representativeMenu: '프리미엄 세트', shopType: ShopType.MARKET, backgroundImage: '/assets/shops/shop_market.png', requiredStars: 118, goldMultiplier: 17.8, theme: '복수 할인 적용' },
+  { id: 39, name: '베이커리 팝업 9', representativeMenu: '단골 세트', shopType: ShopType.MARKET, backgroundImage: '/assets/shops/shop_market.png', requiredStars: 122, goldMultiplier: 19.0, theme: '할인 금액과 할인율 관계' },
+  { id: 40, name: '베이커리 팝업 10', representativeMenu: '마스터 세트', shopType: ShopType.MARKET, backgroundImage: '/assets/shops/shop_market.png', requiredStars: 126, goldMultiplier: 20.5, theme: '비율과 백분율 마스터' },
 
-  // 41-45 Royal Bakery
-  { id: 41, name: '왕실 쿠키 베이커리', representativeMenu: '왕실 쿠키', shopType: ShopType.ROYAL, backgroundImage: '/assets/shops/shop_royal.png', requiredStars: 130, goldMultiplier: 22.0, theme: '소금물과 시럽 농도 비율' },
-  { id: 42, name: '왕실 케이크 베이커리', representativeMenu: '왕실 케이크', shopType: ShopType.ROYAL, backgroundImage: '/assets/shops/shop_royal.png', requiredStars: 135, goldMultiplier: 23.5, theme: '성분 비율의 혼합 계산' },
-  { id: 43, name: '왕실 도넛 베이커리', representativeMenu: '왕실 도넛', shopType: ShopType.ROYAL, backgroundImage: '/assets/shops/shop_royal.png', requiredStars: 140, goldMultiplier: 25.0, theme: '기준량의 역산' },
-  { id: 44, name: '왕실 마카롱 베이커리', representativeMenu: '왕실 마카롱', shopType: ShopType.ROYAL, backgroundImage: '/assets/shops/shop_royal.png', requiredStars: 145, goldMultiplier: 27.0, theme: '전체의 수 추정하기' },
-  { id: 45, name: '황금 레시피 상점', representativeMenu: '황금 레시피', shopType: ShopType.ROYAL, backgroundImage: '/assets/shops/shop_royal.png', requiredStars: 150, goldMultiplier: 30.0, theme: '황금 비율 분배' },
+  // 41-45 왕실 베이커리
+  { id: 41, name: '왕실 베이커리 1', representativeMenu: '왕실 쿠키', shopType: ShopType.ROYAL, backgroundImage: '/assets/shops/shop_royal.png', requiredStars: 130, goldMultiplier: 22.0, theme: '소금물과 시럽 농도 비율' },
+  { id: 42, name: '왕실 베이커리 2', representativeMenu: '왕실 케이크', shopType: ShopType.ROYAL, backgroundImage: '/assets/shops/shop_royal.png', requiredStars: 135, goldMultiplier: 23.5, theme: '성분 비율의 혼합 계산' },
+  { id: 43, name: '왕실 베이커리 3', representativeMenu: '왕실 도넛', shopType: ShopType.ROYAL, backgroundImage: '/assets/shops/shop_royal.png', requiredStars: 140, goldMultiplier: 25.0, theme: '기준량의 역산' },
+  { id: 44, name: '왕실 베이커리 4', representativeMenu: '왕실 마카롱', shopType: ShopType.ROYAL, backgroundImage: '/assets/shops/shop_royal.png', requiredStars: 145, goldMultiplier: 27.0, theme: '전체의 수 추정하기' },
+  { id: 45, name: '왕실 베이커리 5', representativeMenu: '황금 레시피', shopType: ShopType.ROYAL, backgroundImage: '/assets/shops/shop_royal.png', requiredStars: 150, goldMultiplier: 30.0, theme: '황금 비율 분배' },
 
-  // 46-50 Hall of Fame
-  { id: 46, name: '베이커리 챔피언십', representativeMenu: '대회 세트', shopType: ShopType.FINAL, backgroundImage: '/assets/shops/shop_final.png', requiredStars: 155, goldMultiplier: 33.0, theme: '종합 응용 문장제 1' },
-  { id: 47, name: '별빛 베이커리', representativeMenu: '별빛 디저트', shopType: ShopType.FINAL, backgroundImage: '/assets/shops/shop_final.png', requiredStars: 160, goldMultiplier: 36.5, theme: '종합 응용 문장제 2' },
-  { id: 48, name: '꿈빛 베이커리', representativeMenu: '꿈빛 디저트', shopType: ShopType.FINAL, backgroundImage: '/assets/shops/shop_final.png', requiredStars: 166, goldMultiplier: 40.0, theme: '종합 응용 문장제 3' },
-  { id: 49, name: '전설의 베이커리', representativeMenu: '전설의 빵', shopType: ShopType.FINAL, backgroundImage: '/assets/shops/shop_final.png', requiredStars: 172, goldMultiplier: 45.0, theme: '전설 레시피 비율 탐구' },
-  { id: 50, name: '명예의 베이커리', representativeMenu: '시그니처 빵', shopType: ShopType.FINAL, backgroundImage: '/assets/shops/shop_final.png', requiredStars: 180, goldMultiplier: 50.0, theme: '비와 비율의 마스터 선서' }
+  // 46-50 천재 파티셰 명예의 베이커리
+  { id: 46, name: '천재 파티셰 명예의 베이커리 1', representativeMenu: '대회 세트', shopType: ShopType.FINAL, backgroundImage: '/assets/shops/shop_final.png', requiredStars: 155, goldMultiplier: 33.0, theme: '종합 응용 문장제 1' },
+  { id: 47, name: '천재 파티셰 명예의 베이커리 2', representativeMenu: '별빛 디저트', shopType: ShopType.FINAL, backgroundImage: '/assets/shops/shop_final.png', requiredStars: 160, goldMultiplier: 36.5, theme: '종합 응용 문장제 2' },
+  { id: 48, name: '천재 파티셰 명예의 베이커리 3', representativeMenu: '꿈빛 디저트', shopType: ShopType.FINAL, backgroundImage: '/assets/shops/shop_final.png', requiredStars: 166, goldMultiplier: 40.0, theme: '종합 응용 문장제 3' },
+  { id: 49, name: '천재 파티셰 명예의 베이커리 4', representativeMenu: '전설의 빵', shopType: ShopType.FINAL, backgroundImage: '/assets/shops/shop_final.png', requiredStars: 172, goldMultiplier: 45.0, theme: '전설 레시피 비율 탐구' },
+  { id: 50, name: '천재 파티셰 명예의 베이커리 5', representativeMenu: '시그니처 빵', shopType: ShopType.FINAL, backgroundImage: '/assets/shops/shop_final.png', requiredStars: 180, goldMultiplier: 50.0, theme: '비와 비율의 마스터 선서' }
 ];
 
+/** @deprecated Use getQuestionsPerStage(stageId) — 기본 10문제 */
 export const QUESTIONS_PER_STAGE = 10;
+
+export function getQuestionsPerStage(stageId: number): number {
+  if (stageId >= 40) return 30;
+  if (stageId >= 20) return 20;
+  return 10;
+}
 
 // Helper to determine clean whole number factors
 function getCleanFraction(seed: number): { numerator: number; denominator: number; decimal: number; percent: number } {
@@ -105,8 +112,8 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
   const questions: MathQuestion[] = [];
   const menu = stage.representativeMenu;
 
-  // 10 questions per stage (reuses 5 templates with varied seeds for 6–10)
-  for (let qIndex = 1; qIndex <= QUESTIONS_PER_STAGE; qIndex++) {
+  const questionCount = getQuestionsPerStage(stageId);
+  for (let qIndex = 1; qIndex <= questionCount; qIndex++) {
     const slot = ((qIndex - 1) % 5) + 1;
     const seed = (stageId * 7) + (qIndex * 13);
     const id = (stageId * 100) + qIndex;
@@ -311,139 +318,124 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
         });
       }
 
-    } else if (stage.shopType === ShopType.DONUT) {
-      // 21-25: Donut Shop (Percentage Conversions)
+    } else if (stage.shopType === ShopType.DONUT || stage.shopType === ShopType.MACARON) {
+      // 21~30: 백분율 구하기(1·3) + 백분율→양(2·4) + 목표 대비 판매량(5)
       const frac = getCleanFraction(seed);
-      if (slot === 1) {
-        questions.push({
-          id,
-          category: QuestionCategory.PERCENTAGE_CONVERSION,
-          questionText: `오늘 구운 도넛 25개 중에서 ${frac.denominator === 25 ? frac.numerator : Math.round(25 * frac.decimal)}개가 생크림 스프링클 도넛입니다. 생크림 도넛이 차지하는 비율은 몇 '%' 입니까? (기호는 빼고 정수만 적으세요)`,
-          correctAnswer: `${frac.percent}`,
-          acceptableAnswers: [`${frac.percent}`],
-          unit: '%',
-          hint: `백분율은 기준량을 100으로 둘 때의 비율입니다. 소수 비율에 100을 곱하면 퍼센트(%) 단위를 얻을 수 있습니다: ${frac.decimal} × 100 = ${frac.percent}% 입니다.`
-        });
-      } else if (slot === 2) {
-        const decimalVal = 0.15 + ((seed % 10) / 100); // from 0.15 to 0.24
-        const ansPercent = Math.round(decimalVal * 100);
-        questions.push({
-          id,
-          category: QuestionCategory.PERCENTAGE_CONVERSION,
-          questionText: `기본 도넛의 마진 비율 계산값이 ${decimalVal.toFixed(2)} 입니다. 이 소수 비율을 백분율(%)로 표기하면 얼마입니까?`,
-          correctAnswer: `${ansPercent}`,
-          acceptableAnswers: [`${ansPercent}`],
-          unit: '%',
-          hint: '소수에 100을 곱한 뒤 % 기호를 붙이면 백분율이 완성됩니다. 예: 0.15는 15% 입니다.'
-        });
-      } else if (slot === 3) {
-        const numer = 3;
-        const denom = 5; // 3/5 = 60
-        questions.push({
-          id,
-          category: QuestionCategory.PERCENTAGE_CONVERSION,
-          questionText: `단골 도넛 세트 박스 속 ${denom}가지 도넛 중 초콜릿 코팅 버전은 ${numer}가지입니다. 초콜릿 도넛의 비중은 전체의 몇 % 입니까?`,
-          correctAnswer: `60`,
-          acceptableAnswers: [`60`],
-          unit: '%',
-          hint: `${numer}/${denom} = 6/10 = 60/100 이므로, 100을 곱하면 60%가 됩니다.`
-        });
-      } else if (slot === 4) {
-        // Selection options
-        const opts = ['15%', '35%', '45%', '55%'];
-        questions.push({
-          id,
-          category: QuestionCategory.PERCENTAGE_CONVERSION,
-          questionText: `기본 글레이즈 도넛을 완성하는 데 필요한 밀가루 20스푼 중, 9스푼이 감자 전분 분말입니다. 전체 분량 중 감자 전분이 차지하는 비중은 몇 % 인지 고르세요.`,
-          options: opts,
-          correctAnswer: `45%`,
-          acceptableAnswers: [`45%`, `45`],
-          unit: '%',
-          hint: '9/20 = 45/100 이 되므로 백분율은 45% 입니다.'
-        });
-      } else {
-        // Interactive Ratio Builder
-        const countA = 3;
-        const countB = 2; // Ratio 3:2 -> portion is 3/5 = 60%
-        questions.push({
-          id,
-          category: QuestionCategory.INGREDIENT_RATIO_BUILDER,
-          questionText: `설탕 도넛 요리 기법에서는 글레이즈 시럽 ${countA}g 과 설탕 파우더 ${countB}g 을 잘 섞어야 합니다. 시럽이 전체 수량의 60% 기여도를 가질 수 있도록 알맞게 투입하세요.`,
-          recipeDetails: { itemA: '글레이즈시럽', itemB: '설탕파우더', valA: countA, valB: countB },
-          correctAnswer: `${countA}:${countB}`,
-          acceptableAnswers: [`${countA}:${countB}`],
-          hint: '글레이즈시럽 3번, 설탕파우더 2번을 배합하면 전체 5 중에서 시럽 3의 비중인 3/5 = 60% 가 성립됩니다.'
-        });
-      }
+      const menuLabel = menu;
 
-    } else if (stage.shopType === ShopType.MACARON) {
-      // 26-30: Macaron Shop (Calculate Target Value from Percentage)
-      const totalMacarons = 10 + ((seed % 5) * 10); // 10, 20, 30, 40, 50
-      const frac = getCleanFraction(seed + 2);
-      const targetCount = Math.round(totalMacarons * (frac.percent / 100));
-      if (slot === 1) {
-        questions.push({
-          id,
-          category: QuestionCategory.APPLIED_WORD_PROBLEM,
-          questionText: `마카롱 단체 포장 상자 한 개에 총 ${totalMacarons}개의 알록달록한 마카롱이 가득 들어있습니다. 그 중 딸기 마카롱의 백분율이 ${frac.percent}% 일 때, 실제 상자 안의 딸기 마카롱은 몇 개입니까?`,
-          correctAnswer: `${targetCount}`,
-          acceptableAnswers: [`${targetCount}`],
-          unit: '개',
-          hint: `'비교하는 양(딸기 수) = 기준량(전체 마카롱 수) × 비율(백분율 ÷ 100)' 공식을 활용해 보세요: ${totalMacarons} × ${frac.percent / 100} = ${targetCount}개 입니다.`
-        });
-      } else if (slot === 2) {
-        const total = 40;
-        const percent = 25; // 40 * 0.25 = 10
-        questions.push({
-          id,
-          category: QuestionCategory.APPLIED_WORD_PROBLEM,
-          questionText: `고객님이 민트 마카롱 세트 40개를 미리 주문하셨습니다. 민트 마카롱 세트 중 25%에는 장식용 별가루를 뿌리기로 했습니다. 별가루를 뿌릴 민트 마카롱은 총 몇 개입니까?`,
-          correctAnswer: `10`,
-          acceptableAnswers: [`10`],
-          unit: '개',
-          hint: '40개의 25% (40 × 0.25)는 10개입니다.'
-        });
-      } else if (slot === 3) {
-        const totalNum = 15;
-        const ratioText = '4:1'; // chocolate to vanilla. chocolate is 4/5, vanilla is 1/5
-        questions.push({
-          id,
-          category: QuestionCategory.APPLIED_WORD_PROBLEM,
-          questionText: `우리 마카롱 창고에 초콜릿 꼬끄와 바닐라 꼬끄의 개수 비가 ${ratioText} 로 보관되어 있습니다. 보관된 전체 꼬끄의 수가 15개일 때, 바닐라 꼬끄는 몇 개입니까?`,
-          correctAnswer: `3`,
-          acceptableAnswers: [`3`],
-          unit: '개',
-          hint: '전체 15개 중 바닐라 꼬끄는 비 4:1의 비율 배분에 의해 전체의 1/(4+1) = 1/5 만큼을 차지합니다. 따라서 15 × 1/5 = 3개 입니다.'
-        });
-      } else if (slot === 4) {
-        const optionSelect = ['6개', '12개', '18개', '24개'];
-        questions.push({
-          id,
-          category: QuestionCategory.APPLIED_WORD_PROBLEM,
-          questionText: `마카롱 페스티벌 세트의 총 30개 디저트 중, 필링이 버터 크림인 디저트의 비율이 40% 입니다. 버터 크림 필링 디저트는 몇 개인지 선택하세요.`,
-          options: optionSelect,
-          correctAnswer: `12개`,
-          acceptableAnswers: [`12개`, `12`],
-          unit: '개',
-          hint: '30 × 0.4 = 12개 입니다.'
-        });
+      if (slot === 1 || slot === 3) {
+        const findVariant = (slot + seed + stageId) % 4;
+        if (findVariant === 0) {
+          const total = 20 + (seed % 5) * 5;
+          const part = Math.round(total * (frac.percent / 100));
+          questions.push({
+            id,
+            category: QuestionCategory.PERCENTAGE_CONVERSION,
+            questionText: `오늘 구운 ${menuLabel} ${total}개 중 ${part}개가 VIP 주문 메뉴입니다. VIP 메뉴가 차지하는 비율은 몇 % 입니까? (숫자만 적으세요)`,
+            correctAnswer: `${frac.percent}`,
+            acceptableAnswers: [`${frac.percent}`],
+            unit: '%',
+            hint: `비율 = ${part} ÷ ${total} = ${frac.decimal}, 백분율 = ${frac.decimal} × 100 = ${frac.percent}%`
+          });
+        } else if (findVariant === 1) {
+          const decimalVal = 0.1 + ((seed % 9) / 100);
+          const ansPercent = Math.round(decimalVal * 100);
+          questions.push({
+            id,
+            category: QuestionCategory.PERCENTAGE_CONVERSION,
+            questionText: `${menuLabel} 반죽의 설탕 농도 비율이 소수 ${decimalVal.toFixed(2)} 로 측정되었습니다. 이를 백분율(%)로 나타내면?`,
+            correctAnswer: `${ansPercent}`,
+            acceptableAnswers: [`${ansPercent}`],
+            unit: '%',
+            hint: `소수 ${decimalVal} × 100 = ${ansPercent}%`
+          });
+        } else if (findVariant === 2) {
+          const numer = 2 + (seed % 4);
+          const denom = numer + 3 + (seed % 3);
+          const pct = Math.round((numer / denom) * 100);
+          questions.push({
+            id,
+            category: QuestionCategory.PERCENTAGE_CONVERSION,
+            questionText: `${menuLabel} 세트 ${denom}개 중 바삭한 겉면이 완성된 것은 ${numer}개입니다. 완성된 비중은 전체의 몇 % 입니까?`,
+            correctAnswer: `${pct}`,
+            acceptableAnswers: [`${pct}`],
+            unit: '%',
+            hint: `${numer}/${denom}의 비율에 100을 곱하면 ${pct}%`
+          });
+        } else {
+          const opts = ['20%', '35%', '45%', '55%'];
+          questions.push({
+            id,
+            category: QuestionCategory.PERCENTAGE_CONVERSION,
+            questionText: `밀가루 20스푼과 버터 9스푼을 섞었습니다. 버터가 차지하는 비중은 몇 % 인지 고르세요.`,
+            options: opts,
+            correctAnswer: `45%`,
+            acceptableAnswers: [`45%`, `45`],
+            unit: '%',
+            hint: '9/20 = 45/100 → 45%'
+          });
+        }
+      } else if (slot === 2 || slot === 4) {
+        const qtyVariant = (slot + seed) % 3;
+        if (qtyVariant === 0) {
+          const totalItems = 30 + (seed % 6) * 10;
+          const fracPart = getCleanFraction(seed + 3);
+          const partCount = Math.round(totalItems * (fracPart.percent / 100));
+          questions.push({
+            id,
+            category: QuestionCategory.APPLIED_WORD_PROBLEM,
+            questionText: `${menuLabel} 진열 총 ${totalItems}개 중, 딸기 맛이 ${fracPart.percent}% 를 차지합니다. 딸기 맛 ${menuLabel}은 몇 개입니까?`,
+            correctAnswer: `${partCount}`,
+            acceptableAnswers: [`${partCount}`],
+            unit: '개',
+            hint: `${totalItems} × (${fracPart.percent} ÷ 100) = ${partCount}개`
+          });
+        } else if (qtyVariant === 1) {
+          const total = 40 + (seed % 4) * 10;
+          const pct = [20, 25, 30, 40][seed % 4];
+          const ans = Math.round(total * (pct / 100));
+          questions.push({
+            id,
+            category: QuestionCategory.APPLIED_WORD_PROBLEM,
+            questionText: `단체 주문 ${menuLabel} ${total}개 중 ${pct}% 에 장식 토핑을 올립니다. 토핑을 올린 ${menuLabel}은 몇 개입니까?`,
+            correctAnswer: `${ans}`,
+            acceptableAnswers: [`${ans}`],
+            unit: '개',
+            hint: `${total} × ${pct / 100} = ${ans}개`
+          });
+        } else {
+          const totalBox = 30;
+          const optionSelect = ['6개', '9개', '12개', '15개'];
+          questions.push({
+            id,
+            category: QuestionCategory.APPLIED_WORD_PROBLEM,
+            questionText: `${menuLabel} 선물 박스 ${totalBox}개 중, 초코 필링 비율이 30% 입니다. 초코 필링 ${menuLabel}은 몇 개인지 고르세요.`,
+            options: optionSelect,
+            correctAnswer: `9개`,
+            acceptableAnswers: [`9개`, `9`],
+            unit: '개',
+            hint: `${totalBox} × 0.3 = 9개`
+          });
+        }
       } else {
-        // Interactive Ratio Builder
-        const countA = 4;
-        const countB = 1;
+        const goalBases = [80, 100, 120, 150, 200];
+        const sellPercents = [110, 120, 125, 130, 150];
+        const goalBase = goalBases[(seed + stageId) % goalBases.length];
+        const sellPercent = sellPercents[(seed + qIndex) % sellPercents.length];
+        const soldCount = Math.round(goalBase * (sellPercent / 100));
         questions.push({
           id,
-          category: QuestionCategory.INGREDIENT_RATIO_BUILDER,
-          questionText: `레몬 마카롱 완성도를 높이려면 레몬 제스트 ${countA}조각과 라임 가루 ${countB}스푼을 혼합 투입해야 합니다. 두 성분의 무게비가 4:1을 나타내도록 그릇에 채우세요.`,
-          recipeDetails: { itemA: '레몬제스트', itemB: '라임가루', valA: countA, valB: countB },
-          correctAnswer: `${countA}:${countB}`,
-          acceptableAnswers: [`${countA}:${countB}`],
-          hint: '레몬제스트 4번, 라임가루 1번을 투입해서 딱 알맞는 신맛 비율을 맞추어 보세요.'
+          category: QuestionCategory.APPLIED_WORD_PROBLEM,
+          questionText: `하루 목표 ${menuLabel} 굽기를 ${goalBase}개로 정했는데, 실제 판매량은 목표의 ${sellPercent}% 를 달성했습니다. 오늘 몇 개를 판매했습니까?`,
+          correctAnswer: `${soldCount}`,
+          acceptableAnswers: [`${soldCount}`],
+          unit: '개',
+          hint: `목표 개수 × (백분율 ÷ 100): ${goalBase} × ${sellPercent / 100} = ${soldCount}개 (예: 목표 100개의 120% → 120개)`
         });
       }
 
     } else if (stage.shopType === ShopType.MARKET) {
-      // 31-40: Discount Market (Sales & Percentages)
+      // 31-40: 베이커리 팝업 (Sales & Percentages)
       const basePrice = 2000 + ((seed % 10) * 1000); // 2000 ~ 11000
       const discountRates = [10, 15, 20, 25, 30, 40, 50];
       const discountRate = discountRates[seed % discountRates.length];
@@ -496,8 +488,22 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
           unit: '원',
           hint: '할인율 30%를 빼고 정가의 70% 가격만 받습니다. 7500 × 0.7 = 5250원 입니다.'
         });
+      } else if (slot === 5 || qIndex > 5) {
+        const goalBases = [80, 100, 120, 150, 200];
+        const sellPercents = [110, 120, 125, 130, 150];
+        const goalBase = goalBases[(seed + stageId) % goalBases.length];
+        const sellPercent = sellPercents[(seed + qIndex) % sellPercents.length];
+        const soldCount = Math.round(goalBase * (sellPercent / 100));
+        questions.push({
+          id,
+          category: QuestionCategory.APPLIED_WORD_PROBLEM,
+          questionText: `베이커리 팝업 오픈! 하루 목표 ${menu} 판매를 ${goalBase}개로 잡았는데, 실제로는 목표의 ${sellPercent}% 만큼 팔렸습니다. 오늘 몇 개를 판매했습니까?`,
+          correctAnswer: `${soldCount}`,
+          acceptableAnswers: [`${soldCount}`],
+          unit: '개',
+          hint: `${goalBase} × ${sellPercent / 100} = ${soldCount}개 (목표 100개의 120% 판매 → 120개)`
+        });
       } else {
-        // Interactive Ratio Builder for mixing flour & starch
         const countA = 3;
         const countB = 7;
         questions.push({

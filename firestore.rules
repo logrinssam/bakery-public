@@ -1,0 +1,69 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /hallRecords/{recordId} {
+      allow read: if true;
+      allow create: if isValidHallRecord(request.resource.data);
+      allow update, delete: if false;
+    }
+
+    match /visitors/{deviceId} {
+      allow read: if true;
+      allow create: if deviceId.size() >= 8
+        && deviceId.size() <= 64
+        && request.resource.data.keys().hasOnly(['deviceId', 'firstSeen'])
+        && request.resource.data.deviceId == deviceId;
+      allow update, delete: if false;
+    }
+
+    match /meta/stats {
+      allow read: if true;
+      allow create: if isValidStatsCreate(request.resource.data);
+      allow update: if isValidStatsUpdate(request.resource.data);
+      allow delete: if false;
+    }
+  }
+}
+
+function isValidHallRecord(data) {
+  return data.keys().hasOnly([
+      'name', 'schoolName', 'comment', 'date', 'stars', 'highestStreak', 'createdAt'
+    ])
+    && data.name is string
+    && data.name.size() >= 1
+    && data.name.size() <= 30
+    && data.schoolName is string
+    && data.schoolName.size() >= 2
+    && data.schoolName.size() <= 80
+    && data.comment is string
+    && data.comment.size() >= 1
+    && data.comment.size() <= 200
+    && data.date is string
+    && data.date.size() >= 8
+    && data.date.size() <= 12
+    && data.stars is int
+    && data.stars >= 0
+    && data.stars <= 600
+    && data.highestStreak is int
+    && data.highestStreak >= 0
+    && data.highestStreak <= 100
+    && data.createdAt is string
+    && data.createdAt.size() >= 10
+    && data.createdAt.size() <= 40;
+}
+
+function isValidStatsCreate(data) {
+  return data.keys().hasOnly(['totalSessions', 'uniqueDevices', 'updatedAt'])
+    && data.totalSessions == 1
+    && data.uniqueDevices == 0;
+}
+
+function isValidStatsUpdate(data) {
+  return data.keys().hasAll(['totalSessions', 'uniqueDevices'])
+    && data.totalSessions is int
+    && data.uniqueDevices is int
+    && data.totalSessions >= resource.data.totalSessions
+    && data.totalSessions <= resource.data.totalSessions + 1
+    && data.uniqueDevices >= resource.data.uniqueDevices
+    && data.uniqueDevices <= resource.data.uniqueDevices + 1;
+}

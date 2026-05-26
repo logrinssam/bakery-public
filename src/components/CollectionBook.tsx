@@ -39,7 +39,7 @@ const MASCOT_ENTRIES = [
     name: '솜털 토끼 (Fluffy Bunny)',
     emoji: '🐰',
     description: '깡충깡충 소동을 피우는 수줍음 많은 토끼. 멜론 빵 소보로 비스킷 냄새를 환상적으로 맡아내며 백분율 가격 인하 판매를 계산하기 좋아합니다.',
-    unlockedClue: '도넛 박스 세트 및 할인 마켓 (St.21~25, 31~40) 출몰',
+    unlockedClue: '도넛 상점·베이커리 팝업 (St.21~25, 31~40) 출몰',
     isVip: false,
     baseGreeting: '멜론 빵 냄새를 맡고 껑충껑충 뛰어왔어요!'
   },
@@ -71,7 +71,7 @@ const MASCOT_ENTRIES = [
     name: '부지런 비버 (Beaver)',
     emoji: '🦫',
     description: '하루 종일 통나무 보와 수로를 설계하고 만드는 공학 에이스 비버. 정교한 비 비례 공법을 빵 반죽 배합에 적용하며 기운을 채웁니다.',
-    unlockedClue: '백분율 할인 마켓 (St.31~40) 진행 중 중확률 출몰',
+    unlockedClue: '베이커리 팝업 (St.31~40) 진행 중 중확률 출몰',
     isVip: false,
     baseGreeting: '숲속 보를 건설하다 힘이 다 빠졌어요! 고칼로리 롤파이 주세요!'
   },
@@ -125,9 +125,9 @@ const getDessertUnlockClue = (index: number) => {
   if (stageId >= 16 && stageId <= 20) return `St.${stageId} 케이크 상점`;
   if (stageId >= 21 && stageId <= 25) return `St.${stageId} 도넛 상점`;
   if (stageId >= 26 && stageId <= 30) return `St.${stageId} 마카롱 상점`;
-  if (stageId >= 31 && stageId <= 40) return `St.${stageId} 할인 배합 마켓`;
-  if (stageId >= 41 && stageId <= 45) return `St.${stageId} 왕실 상점`;
-  return `St.${stageId} 명예 매장`;
+  if (stageId >= 31 && stageId <= 40) return `St.${stageId} 베이커리 팝업`;
+  if (stageId >= 41 && stageId <= 45) return `St.${stageId} 왕실 베이커리`;
+  return `St.${stageId} 천재 파티셰 명예의 베이커리`;
 };
 
 export const CollectionBook: React.FC<CollectionBookProps> = ({
@@ -204,7 +204,7 @@ export const CollectionBook: React.FC<CollectionBookProps> = ({
               : 'bg-white text-stone-600 border-stone-250 hover:bg-stone-50'
           }`}
         >
-          🧁 명품 디저트 도감 ({uniqueUnlockedBreads.length}종 발견)
+          🧁 디저트 도감 ({uniqueUnlockedBreads.length}종 발견)
         </button>
 
         <button

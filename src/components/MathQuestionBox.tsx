@@ -181,9 +181,11 @@ export const MathQuestionBox: React.FC<MathQuestionBoxProps> = ({
           {question.category === QuestionCategory.RATIO_EXPRESSION && '비의 기초 구하기'}
           {question.category === QuestionCategory.RATIO_VALUE_FRACTION && '비율 구하기 (분수)'}
           {question.category === QuestionCategory.RATIO_VALUE_DECIMAL && '비율 구하기 (소수)'}
-          {question.category === QuestionCategory.PERCENTAGE_CONVERSION && '백분율 (%) 환산 연습'}
+          {question.category === QuestionCategory.PERCENTAGE_CONVERSION && '비율 → 백분율(%) 구하기'}
+          {question.category === QuestionCategory.APPLIED_WORD_PROBLEM && question.unit === '개' && question.questionText.includes('목표') && '목표 대비 백분율 판매량'}
+          {question.category === QuestionCategory.APPLIED_WORD_PROBLEM && question.unit === '개' && question.questionText.includes('%') && !question.questionText.includes('목표') && '백분율에 해당하는 양 구하기'}
+          {question.category === QuestionCategory.APPLIED_WORD_PROBLEM && !(question.unit === '개' && question.questionText.includes('%')) && '실생활 비의 응용수학'}
           {question.category === QuestionCategory.DISCOUNT_CALCULATION && '할인율과 판매 가액'}
-          {question.category === QuestionCategory.APPLIED_WORD_PROBLEM && '실생활 비의 응용수학'}
           {question.category === QuestionCategory.INGREDIENT_RATIO_BUILDER && '핸즈온 베이킹 배합'}
         </span>
         
