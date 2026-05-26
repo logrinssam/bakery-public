@@ -101,6 +101,7 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
   const [visitStats, setVisitStats] = useState<VisitStats | null>(null);
   const [topSchools, setTopSchools] = useState<SchoolVisitStats[]>([]);
   const [showTeacherStats, setShowTeacherStats] = useState(false);
+  const [teacherPin, setTeacherPin] = useState<string | null>(null);
   const [registering, setRegistering] = useState(false);
   const [rankingClock, setRankingClock] = useState(() => Date.now());
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
@@ -385,9 +386,43 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
     const entered = window.prompt('교사용 접속 통계 PIN을 입력하세요.');
     if (entered === null) return;
     void verifyTeacherPin(entered).then((ok) => {
-      if (ok) setShowTeacherStats(true);
+      if (ok) {
+        setTeacherPin(entered.trim());
+        setShowTeacherStats(true);
+      }
       else alert('PIN이 올바르지 않습니다.');
     });
+  };
+
+  const handleDeleteHallRecord = async (recordId: string) => {
+    if (!teacherPin) {
+      alert('교사용 PIN을 먼저 입력해 주세요.');
+      return;
+    }
+    if (!window.confirm('이 명예의 전당 기록을 삭제할까요?')) return;
+
+    const projectId = (import.meta.env.VITE_FIREBASE_PROJECT_ID ?? '').trim();
+    if (!projectId) {
+      alert('Firebase 프로젝트 설정이 필요합니다.');
+      return;
+    }
+    const endpoint = `https://asia-northeast3-${projectId}.cloudfunctions.net/deleteHallRecord`;
+
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: teacherPin, recordId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.ok) {
+        alert('삭제에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+        return;
+      }
+      await refreshHallRecords({ bypassCooldown: true, isManual: true });
+    } catch {
+      alert('삭제에 실패했습니다. 네트워크 상태를 확인해 주세요.');
+    }
   };
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
@@ -1065,6 +1100,17 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
                       >
                         <Download className="w-4 h-4" />
                       </button>
+
+                      {showTeacherStats && teacherPin && (
+                        <button
+                          type="button"
+                          onClick={() => void handleDeleteHallRecord(rec.id)}
+                          className="bg-red-50 hover:bg-red-100 text-red-700 border-2 border-red-200 p-1.5 rounded-xl transition-all h-[34px] w-[34px] flex items-center justify-center cursor-pointer"
+                          title="(교사용) 이 기록 삭제하기"
+                        >
+                          <FileText className="w-4 h-4" />
+                        </button>
+                      )}
 
                       <div className="flex items-center gap-1.5 bg-stone-100 border-2 border-stone-200 px-3.5 py-1.5 rounded-xl">
                         <Calendar className="w-4 h-4 text-stone-400" />
