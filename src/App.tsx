@@ -85,6 +85,8 @@ const PORTAL_HOME_URL = 'https://로그인교실.com';
  */
 const COPYRIGHT_NOTICE = 'UI/그래픽 및 리소스 무단 복제·재배포 금지 (© 로그린쌤)';
 
+import { loadElementarySchools, resolveSchoolName, searchSchools } from './data/schools';
+
 export default function App() {
   const [stats, setStats] = useState<PlayerStats>(INITIAL_STATS);
   const [page, setPage] = useState<'intro' | 'map' | 'kitchen' | 'upgrades' | 'fame'>('intro');
@@ -108,6 +110,13 @@ export default function App() {
 
   const [sfxMuted, setSfxMutedState] = useState(false);
 
+  const [showProfileGate, setShowProfileGate] = useState(false);
+  const [profileName, setProfileName] = useState('');
+  const [profileSchoolQuery, setProfileSchoolQuery] = useState('');
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [allowedSchools, setAllowedSchools] = useState<string[]>([]);
+  const [schoolsReady, setSchoolsReady] = useState(false);
+
   // Load saved state on mount
   const sfxPrimedRef = useRef(false);
 
@@ -125,6 +134,14 @@ export default function App() {
       // safe fallback
     }
   }, []);
+
+  useEffect(() => {
+    if (!showProfileGate || schoolsReady) return;
+    loadElementarySchools().then((list) => {
+      setAllowedSchools(list);
+      setSchoolsReady(true);
+    });
+  }, [showProfileGate, schoolsReady]);
 
   useEffect(() => {
     const primeOnce = () => {
@@ -157,6 +174,41 @@ export default function App() {
 
   const handleStartGame = () => {
     primePixelSFX();
+    if (!stats.hallName || !stats.hallSchool) {
+      setProfileName(stats.hallName ?? '');
+      setProfileSchoolQuery(stats.hallSchool ?? '');
+      setProfileError(null);
+      setShowProfileGate(true);
+      return;
+    }
+    setPage('map');
+  };
+
+  const handleSaveProfile = () => {
+    const name = sanitizeDisplayText(profileName, INPUT_LIMITS.hallName);
+    if (!name.trim()) {
+      setProfileError('닉네임(이름)을 입력해 주세요.');
+      return;
+    }
+
+    if (!schoolsReady || allowedSchools.length === 0) {
+      setProfileError('학교 목록을 불러오는 중입니다. 잠시만 기다려 주세요.');
+      return;
+    }
+
+    const resolved = resolveSchoolName(profileSchoolQuery, allowedSchools);
+    if (!resolved) {
+      setProfileError('학교 이름을 목록에서 정확히 선택해 주세요.');
+      return;
+    }
+
+    saveStats({
+      ...stats,
+      hallName: name,
+      hallSchool: resolved,
+    });
+
+    setShowProfileGate(false);
     setPage('map');
   };
 
@@ -551,6 +603,89 @@ export default function App() {
 
       {/* 2. Primary Page router */}
       <main className="flex-1 w-full max-w-7xl mx-auto px-2 sm:px-6 py-3 sm:py-6">
+
+        {showProfileGate && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-3">
+            <div className="w-full max-w-lg bg-white border-4 border-[#5D4037] rounded-3xl shadow-2xl p-5 sm:p-6">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="font-display font-black text-[#5D4037] text-lg sm:text-xl">
+                    🧑‍🍳 시작하기 전에, 닉네임/학교 입력
+                  </h2>
+                  <p className="mt-1 font-sans text-[11px] text-stone-600 font-semibold leading-relaxed break-keep">
+                    수업에서 구분을 위해 <b>닉네임</b>과 <b>학교</b>를 먼저 입력해 주세요. (진행 저장/명예의 전당 입력에 사용)
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowProfileGate(false)}
+                  className="text-stone-500 hover:text-stone-700 font-black text-xl leading-none px-2"
+                  aria-label="닫기"
+                  title="닫기"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 gap-3">
+                <label className="block">
+                  <span className="font-sans text-xs text-stone-600 font-black">닉네임(이름)</span>
+                  <input
+                    value={profileName}
+                    onChange={(e) => setProfileName(e.target.value)}
+                    className="mt-1 w-full px-3 py-2 rounded-xl border-2 border-[#5D4037]/30 focus:border-[#FF85A1] focus:outline-none font-sans font-bold text-sm"
+                    placeholder="예: 6-3 수학왕"
+                    maxLength={INPUT_LIMITS.hallName.max}
+                    autoFocus
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="font-sans text-xs text-stone-600 font-black">학교</span>
+                  <input
+                    value={profileSchoolQuery}
+                    onChange={(e) => setProfileSchoolQuery(e.target.value)}
+                    className="mt-1 w-full px-3 py-2 rounded-xl border-2 border-[#5D4037]/30 focus:border-[#FF85A1] focus:outline-none font-sans font-bold text-sm"
+                    placeholder={schoolsReady ? '예: 서울○○초등학교' : '학교 목록 불러오는 중…'}
+                    list="pb-school-datalist"
+                    disabled={!schoolsReady}
+                  />
+                  <datalist id="pb-school-datalist">
+                    {searchSchools(profileSchoolQuery, allowedSchools, 16).map((s) => (
+                      <option key={s} value={s} />
+                    ))}
+                  </datalist>
+                  <p className="mt-1 text-[10px] font-sans text-stone-500 font-semibold break-keep">
+                    학교 이름을 몇 글자 입력하면 목록이 뜹니다. 목록에서 선택해 주세요.
+                  </p>
+                </label>
+
+                {profileError && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-3 py-2 font-sans text-[11px] font-bold">
+                    {profileError}
+                  </div>
+                )}
+
+                <div className="mt-1 flex flex-col sm:flex-row gap-2 sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setShowProfileGate(false)}
+                    className="px-4 py-2 rounded-xl border-2 border-stone-300 bg-stone-100 text-stone-700 font-sans font-black text-sm hover:bg-stone-200"
+                  >
+                    나중에 입력
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveProfile}
+                    className="px-4 py-2 rounded-xl border-2 border-[#5D4037] bg-[#FF85A1] text-white font-sans font-black text-sm hover:bg-[#FF9FB6]"
+                  >
+                    저장하고 시작
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* Intro Start Page Screen */}
         {page === 'intro' && (
