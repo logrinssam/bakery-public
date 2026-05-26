@@ -1,0 +1,52 @@
+{
+  "rules": {
+    "pinSaves": {
+      "$saveId": {
+        ".read": "auth != null && $saveId.length >= 32 && $saveId.length <= 64",
+        ".write": "auth != null && $saveId.length >= 32 && $saveId.length <= 64"
+      }
+    },
+    "schoolUsers": {
+      "$schoolId": {
+        "users": {
+          "$userId": {
+            ".read": false,
+            ".write": "auth != null && $schoolId.length >= 32 && $userId.length >= 32"
+          }
+        }
+      }
+    },
+    "visitors": {
+      "$deviceId": {
+        ".read": true,
+        ".write": "!data.exists() && $deviceId.length >= 8 && $deviceId.length <= 64"
+      }
+    },
+    "meta": {
+      "stats": {
+        ".read": true,
+        ".write": true
+      },
+      "schools": {
+        ".read": true,
+        ".write": true
+      }
+    },
+    "schoolStats": {
+      "$schoolId": {
+        ".read": true,
+        ".write": true
+      }
+    },
+    "schoolVisitors": {
+      "$schoolId": {
+        "devices": {
+          "$deviceId": {
+            ".read": false,
+            ".write": "!data.exists()"
+          }
+        }
+      }
+    }
+  }
+}
