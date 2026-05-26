@@ -749,12 +749,12 @@ export default function App() {
                     value={profilePin}
                     onChange={(e) => setProfilePin(e.target.value.replace(/[^\d]/g, '').slice(0, 4))}
                     className="mt-1 w-full px-3 py-2 rounded-xl border-2 border-[#5D4037]/30 focus:border-[#FF85A1] focus:outline-none font-sans font-bold text-sm tracking-widest"
-                    placeholder="예: 0404"
+                    placeholder="예: 0000"
                     inputMode="numeric"
                     maxLength={4}
                   />
                   <p className="mt-1 text-[10px] font-sans text-stone-500 font-semibold break-keep">
-                    잊어버리면 복구가 어렵습니다. 학생이 기억할 번호로 정하세요.
+                    자신이 기억할 수 있는 숫자 4자리로 설정해주세요.
                   </p>
                 </label>
 
