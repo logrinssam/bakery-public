@@ -1,6 +1,13 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    match /pinSaves/{saveId} {
+      allow read, write: if request.auth != null
+        && saveId.size() >= 32
+        && saveId.size() <= 64
+        && isValidPlayerSave(request.resource.data);
+    }
+
     match /hallRecords/{recordId} {
       allow read: if true;
       allow create: if isValidHallRecord(request.resource.data);
@@ -23,6 +30,35 @@ service cloud.firestore {
       allow delete: if false;
     }
   }
+}
+
+function isValidPlayerSave(data) {
+  return data.keys().hasOnly([
+      'stageProgress',
+      'gold',
+      'streakCount',
+      'highestStreak',
+      'starsEarned',
+      'correctAnswersCount',
+      'totalAnswersCount',
+      'purchasedEquipmentIds',
+      'hallOfFameRegistered',
+      'hallName',
+      'hallSchool',
+      'hallComment',
+      'hallDate',
+      'unlockedBreadIndices',
+      'encounteredMascotNames',
+      'updatedAt'
+    ])
+    && data.stageProgress is int && data.stageProgress >= 1 && data.stageProgress <= 50
+    && data.gold is int && data.gold >= 0 && data.gold <= 9999999
+    && data.streakCount is int && data.streakCount >= 0 && data.streakCount <= 9999
+    && data.highestStreak is int && data.highestStreak >= 0 && data.highestStreak <= 9999
+    && data.starsEarned is int && data.starsEarned >= 0 && data.starsEarned <= 999999
+    && data.correctAnswersCount is int && data.correctAnswersCount >= 0 && data.correctAnswersCount <= 999999
+    && data.totalAnswersCount is int && data.totalAnswersCount >= 0 && data.totalAnswersCount <= 999999
+    && data.hallOfFameRegistered is bool;
 }
 
 function isValidHallRecord(data) {

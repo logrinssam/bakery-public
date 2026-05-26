@@ -22,6 +22,10 @@ import {
   setSfxMuted,
 } from './lib/pixelSfx';
 import { recordSessionVisit } from './services/firebaseVisits';
+import { ensureAnonSignedIn } from './services/firebaseAnon';
+import { loadPinSave, savePinStats } from './services/firebasePinSave';
+import { sha256Hex } from './lib/cryptoHash';
+import { isFirebaseConfigured } from './lib/firebase';
 import { 
   Trophy, 
   Map, 
@@ -113,9 +117,15 @@ export default function App() {
   const [showProfileGate, setShowProfileGate] = useState(false);
   const [profileName, setProfileName] = useState('');
   const [profileSchoolQuery, setProfileSchoolQuery] = useState('');
+  const [profilePin, setProfilePin] = useState('');
   const [profileError, setProfileError] = useState<string | null>(null);
   const [allowedSchools, setAllowedSchools] = useState<string[]>([]);
   const [schoolsReady, setSchoolsReady] = useState(false);
+
+  const [pinSaveId, setPinSaveId] = useState<string | null>(null);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'saving' | 'error'>('idle');
+  const saveTimerRef = useRef<number | null>(null);
+  const hydratedRef = useRef(false);
 
   // Load saved state on mount
   const sfxPrimedRef = useRef(false);
@@ -133,6 +143,19 @@ export default function App() {
     } catch {
       // safe fallback
     }
+
+    try {
+      const savedId = localStorage.getItem('pixel_bakery_pin_save_id_v1');
+      if (savedId && savedId.length >= 32) setPinSaveId(savedId);
+    } catch {
+      // ignore
+    }
+    hydratedRef.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (!isFirebaseConfigured()) return;
+    void ensureAnonSignedIn();
   }, []);
 
   useEffect(() => {
@@ -170,13 +193,28 @@ export default function App() {
     } catch {
       // safe fallback
     }
+
+    if (pinSaveId) {
+      if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = window.setTimeout(async () => {
+        try {
+          setSyncStatus('saving');
+          await ensureAnonSignedIn();
+          await savePinStats(pinSaveId, newStats);
+          setSyncStatus('idle');
+        } catch {
+          setSyncStatus('error');
+        }
+      }, 800);
+    }
   };
 
   const handleStartGame = () => {
     primePixelSFX();
-    if (!stats.hallName || !stats.hallSchool) {
+    if (!stats.hallName || !stats.hallSchool || !pinSaveId) {
       setProfileName(stats.hallName ?? '');
       setProfileSchoolQuery(stats.hallSchool ?? '');
+      setProfilePin('');
       setProfileError(null);
       setShowProfileGate(true);
       return;
@@ -184,7 +222,7 @@ export default function App() {
     setPage('map');
   };
 
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
     const name = sanitizeDisplayText(profileName, INPUT_LIMITS.hallName);
     if (!name.trim()) {
       setProfileError('닉네임(이름)을 입력해 주세요.');
@@ -202,14 +240,56 @@ export default function App() {
       return;
     }
 
-    saveStats({
-      ...stats,
-      hallName: name,
-      hallSchool: resolved,
-    });
+    const pin = profilePin.trim();
+    if (!/^\d{4}$/.test(pin)) {
+      setProfileError('비밀번호는 숫자 4자리로 입력해 주세요.');
+      return;
+    }
 
-    setShowProfileGate(false);
-    setPage('map');
+    setProfileError(null);
+    setSyncStatus('loading');
+
+    const rawKey = `${resolved}|${name}|${pin}`;
+    const fullHash = await sha256Hex(rawKey);
+    const saveId = fullHash.slice(0, 40);
+
+    try {
+      localStorage.setItem('pixel_bakery_pin_save_id_v1', saveId);
+    } catch {
+      // ignore quota
+    }
+    setPinSaveId(saveId);
+
+    await ensureAnonSignedIn();
+
+    try {
+      const remote = await loadPinSave(saveId, INITIAL_STATS);
+      const next = remote
+        ? remote
+        : {
+            ...stats,
+            hallName: name,
+            hallSchool: resolved,
+          };
+
+      setStats(next);
+      try {
+        localStorage.setItem(STORAGE_KEYS.gameSave, JSON.stringify(next));
+      } catch {
+        // ignore quota
+      }
+
+      if (!remote) {
+        await savePinStats(saveId, next);
+      }
+
+      setSyncStatus('idle');
+      setShowProfileGate(false);
+      setPage('map');
+    } catch {
+      setSyncStatus('error');
+      setProfileError('이어하기 데이터를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.');
+    }
   };
 
   const handleResetGame = () => {
@@ -516,6 +596,15 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-3 ml-auto flex-wrap sm:flex-nowrap">
+            {pinSaveId && (
+              <span
+                className="shrink-0 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg border border-white/15 bg-[#4E342E] text-white font-sans text-[9px] sm:text-[10px] font-bold tracking-tight opacity-90"
+                title="이어하기: 학교/닉네임/비밀번호로 동기화"
+              >
+                이어하기{syncStatus === 'saving' ? ' · 저장중…' : syncStatus === 'loading' ? ' · 불러오는 중…' : ''}
+              </span>
+            )}
+
             <a
               href={PORTAL_HOME_URL}
               className="shrink-0 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg border border-[#F4D03F]/50 bg-[#4E342E] text-[#F4D03F] font-sans text-[9px] sm:text-[10px] font-bold tracking-tight hover:bg-[#6D4C41] hover:border-[#F4D03F] transition-colors flex items-center gap-0.5 sm:gap-1 opacity-90 hover:opacity-100"
@@ -615,6 +704,9 @@ export default function App() {
                   <p className="mt-1 font-sans text-[11px] text-stone-600 font-semibold leading-relaxed break-keep">
                     수업에서 구분을 위해 <b>닉네임</b>과 <b>학교</b>를 먼저 입력해 주세요. 저장해야 게임을 시작할 수 있습니다.
                   </p>
+                  <p className="mt-2 font-sans text-[10px] text-stone-500 font-semibold break-keep">
+                    같은 <b>학교/닉네임/비밀번호</b>로 로그인하면 다른 컴퓨터에서도 이어서 할 수 있어요.
+                  </p>
                 </div>
               </div>
 
@@ -626,7 +718,7 @@ export default function App() {
                     onChange={(e) => setProfileName(e.target.value)}
                     className="mt-1 w-full px-3 py-2 rounded-xl border-2 border-[#5D4037]/30 focus:border-[#FF85A1] focus:outline-none font-sans font-bold text-sm"
                     placeholder="예: 6-3 수학왕"
-                    maxLength={INPUT_LIMITS.hallName.max}
+                    maxLength={INPUT_LIMITS.hallName}
                     autoFocus
                   />
                 </label>
@@ -648,6 +740,21 @@ export default function App() {
                   </datalist>
                   <p className="mt-1 text-[10px] font-sans text-stone-500 font-semibold break-keep">
                     학교 이름을 몇 글자 입력하면 목록이 뜹니다. 목록에서 선택해 주세요.
+                  </p>
+                </label>
+
+                <label className="block">
+                  <span className="font-sans text-xs text-stone-600 font-black">비밀번호 (숫자 4자리)</span>
+                  <input
+                    value={profilePin}
+                    onChange={(e) => setProfilePin(e.target.value.replace(/[^\d]/g, '').slice(0, 4))}
+                    className="mt-1 w-full px-3 py-2 rounded-xl border-2 border-[#5D4037]/30 focus:border-[#FF85A1] focus:outline-none font-sans font-bold text-sm tracking-widest"
+                    placeholder="예: 0404"
+                    inputMode="numeric"
+                    maxLength={4}
+                  />
+                  <p className="mt-1 text-[10px] font-sans text-stone-500 font-semibold break-keep">
+                    잊어버리면 복구가 어렵습니다. 학생이 기억할 번호로 정하세요.
                   </p>
                 </label>
 
