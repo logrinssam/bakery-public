@@ -3,12 +3,14 @@ import { getFirestore, type Firestore } from 'firebase/firestore';
 import { getDatabase, type Database } from 'firebase/database';
 import { getAuth, type Auth } from 'firebase/auth';
 
-function databaseUrlFromEnv(): string {
+/** 콘솔에 보이는 URL과 동일해야 함 (지역 DB는 .firebasedatabase.app) */
+export function databaseUrlFromEnv(): string {
   const explicit = (import.meta.env.VITE_FIREBASE_DATABASE_URL ?? '').trim();
   if (explicit) return explicit;
   const projectId = (import.meta.env.VITE_FIREBASE_PROJECT_ID ?? '').trim();
-  if (projectId) return `https://${projectId}-default-rtdb.firebaseio.com`;
-  return '';
+  if (!projectId) return '';
+  // pixelbakery: asia-southeast1 — 구 firebaseio.com 으로 쓰면 빈 DB에만 연결됨
+  return `https://${projectId}-default-rtdb.asia-southeast1.firebasedatabase.app`;
 }
 
 const firebaseConfig = {
@@ -56,11 +58,12 @@ export function getFirebaseDb(): Firestore | null {
 }
 
 export function getFirebaseRtdb(): Database | null {
-  if (!isRtdbConfigured()) return null;
+  const url = databaseUrlFromEnv();
+  if (!url || !isFirebaseConfigured()) return null;
   const firebaseApp = getFirebaseApp();
   if (!firebaseApp) return null;
   if (!rtdb) {
-    rtdb = getDatabase(firebaseApp);
+    rtdb = getDatabase(firebaseApp, url);
   }
   return rtdb;
 }

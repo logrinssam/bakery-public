@@ -159,12 +159,12 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!showProfileGate || schoolsReady) return;
+    if (schoolsReady) return;
     loadElementarySchools().then((list) => {
       setAllowedSchools(list);
       setSchoolsReady(true);
     });
-  }, [showProfileGate, schoolsReady]);
+  }, [schoolsReady]);
 
   useEffect(() => {
     const primeOnce = () => {
@@ -250,8 +250,15 @@ export default function App() {
       return;
     }
 
-    if (!schoolsReady || allowedSchools.length === 0) {
+    if (!schoolsReady) {
       setProfileError('학교 목록을 불러오는 중입니다. 잠시만 기다려 주세요.');
+      return;
+    }
+
+    if (allowedSchools.length === 0) {
+      setProfileError(
+        '학교 목록 파일을 불러오지 못했습니다. 페이지를 새로고침하거나 잠시 후 다시 시도해 주세요.'
+      );
       return;
     }
 
@@ -270,21 +277,30 @@ export default function App() {
     setProfileError(null);
     setSyncStatus('loading');
 
-    const rawKey = `${resolved}|${name}|${pin}`;
-    const fullHash = await sha256Hex(rawKey);
-    const saveId = fullHash.slice(0, 40);
-
     try {
-      localStorage.setItem('pixel_bakery_pin_save_id_v1', saveId);
-    } catch {
-      // ignore quota
-    }
-    setPinSaveId(saveId);
+      const rawKey = `${resolved}|${name}|${pin}`;
+      const fullHash = await sha256Hex(rawKey);
+      const saveId = fullHash.slice(0, 40);
 
-    await ensureAnonSignedIn();
+      try {
+        localStorage.setItem('pixel_bakery_pin_save_id_v1', saveId);
+      } catch {
+        // ignore quota
+      }
+      setPinSaveId(saveId);
 
-    try {
-      const remote = await loadPinSave(saveId, INITIAL_STATS);
+      let remote: PlayerStats | null = null;
+      let cloudOk = false;
+
+      if (isFirebaseConfigured()) {
+        try {
+          await ensureAnonSignedIn();
+          remote = await loadPinSave(saveId, INITIAL_STATS);
+        } catch {
+          // Firestore/RTDB/익명 로그인 실패 — 로컬 진행으로 계속
+        }
+      }
+
       const next: PlayerStats = {
         ...(remote ?? stats),
         hallName: name,
@@ -298,17 +314,30 @@ export default function App() {
         // ignore quota
       }
 
-      await savePinStats(saveId, next);
+      if (isFirebaseConfigured()) {
+        try {
+          await ensureAnonSignedIn();
+          await savePinStats(saveId, next);
+          void recordSchoolUser(resolved, name, saveId);
+          void recordSchoolVisit(resolved, { force: true });
+          cloudOk = true;
+        } catch {
+          // 로컬은 저장됨 — 게임은 시작 가능
+        }
+      }
 
-      void recordSchoolUser(resolved, name, saveId);
-      void recordSchoolVisit(resolved, { force: true });
-
-      setSyncStatus('idle');
       setShowProfileGate(false);
       setPage('map');
+
+      if (isFirebaseConfigured() && !cloudOk) {
+        window.alert(
+          '이 기기에서는 플레이할 수 있어요.\n\n다른 컴퓨터 이어하기·선생님 집계용 클라우드 저장은 실패했습니다. Firebase 콘솔에서 익명 로그인이 켜져 있는지, 학교 Wi-Fi 차단 여부를 확인해 주세요.'
+        );
+      }
     } catch {
-      setSyncStatus('error');
-      setProfileError('이어하기 데이터를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.');
+      setProfileError('저장 중 오류가 났습니다. 다시 시도해 주세요.');
+    } finally {
+      setSyncStatus('idle');
     }
   };
 
@@ -796,10 +825,19 @@ export default function App() {
                   </button>
                   <button
                     type="button"
-                    onClick={handleSaveProfile}
-                    className="px-4 py-2 rounded-xl border-2 border-[#5D4037] bg-[#FF85A1] text-white font-sans font-black text-sm hover:bg-[#FF9FB6]"
+                    onClick={() => void handleSaveProfile()}
+                    disabled={syncStatus === 'loading' || !schoolsReady}
+                    className={`px-4 py-2 rounded-xl border-2 border-[#5D4037] font-sans font-black text-sm ${
+                      syncStatus === 'loading' || !schoolsReady
+                        ? 'bg-stone-300 text-stone-500 cursor-not-allowed'
+                        : 'bg-[#FF85A1] text-white hover:bg-[#FF9FB6] cursor-pointer'
+                    }`}
                   >
-                    저장하고 시작
+                    {syncStatus === 'loading'
+                      ? '저장 중…'
+                      : !schoolsReady
+                        ? '학교 목록 불러오는 중…'
+                        : '저장하고 시작'}
                   </button>
                 </div>
               </div>
