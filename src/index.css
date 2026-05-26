@@ -1,6 +1,6 @@
-@import "tailwindcss";
-
 @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Quicksand:wght@400;500;700;900&display=swap');
+
+@import "tailwindcss";
 
 @theme {
   --color-brand-brown: #5D4037;
@@ -113,3 +113,4 @@
   background-image: radial-gradient(#F4D03F 2px, transparent 2px);
   background-size: 8px 8px;
 }
+

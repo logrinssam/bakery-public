@@ -79,6 +79,12 @@ const VIP_MASCOTS = [
 /** 로그인교실 메인(교실 목록) — 서브도메인 게임 공통 */
 const PORTAL_HOME_URL = 'https://로그인교실.com';
 
+/**
+ * UI/그래픽 및 리소스 무단 복제·재배포 금지 (© 로그린쌤)
+ * 이 고지는 화면 표시용이 아니라, 소스 내 저작권 표기용입니다.
+ */
+const COPYRIGHT_NOTICE = 'UI/그래픽 및 리소스 무단 복제·재배포 금지 (© 로그린쌤)';
+
 export default function App() {
   const [stats, setStats] = useState<PlayerStats>(INITIAL_STATS);
   const [page, setPage] = useState<'intro' | 'map' | 'kitchen' | 'upgrades' | 'fame'>('intro');

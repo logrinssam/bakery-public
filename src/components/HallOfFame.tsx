@@ -548,7 +548,9 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
             <ArrowLeft className="w-5 h-5 text-[#5D4037]" />
           </button>
           <div>
-            <h1 className="font-display font-black text-[#5D4037] text-2xl md:text-3xl tracking-tight">🏆 수학 마스터 파티셰 전당</h1>
+            <h1 className="font-display font-black text-[#5D4037] text-2xl md:text-3xl tracking-tight leading-snug pb-0.5 inline-block">
+              🏆 수학 마스터 파티셰 전당
+            </h1>
             <p className="font-sans text-xs text-stone-500 font-medium mt-1">
               50단계 최종 시그니처 베이커리를 완성한 천재 파티셰들의 명단·학교 순위는{' '}
               <span className="text-amber-800">{getRankingIntervalDescription(rankingNow)}</span> 공개됩니다.
