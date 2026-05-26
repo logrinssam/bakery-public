@@ -613,18 +613,9 @@ export default function App() {
                     🧑‍🍳 시작하기 전에, 닉네임/학교 입력
                   </h2>
                   <p className="mt-1 font-sans text-[11px] text-stone-600 font-semibold leading-relaxed break-keep">
-                    수업에서 구분을 위해 <b>닉네임</b>과 <b>학교</b>를 먼저 입력해 주세요. (진행 저장/명예의 전당 입력에 사용)
+                    수업에서 구분을 위해 <b>닉네임</b>과 <b>학교</b>를 먼저 입력해 주세요. 저장해야 게임을 시작할 수 있습니다.
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setShowProfileGate(false)}
-                  className="text-stone-500 hover:text-stone-700 font-black text-xl leading-none px-2"
-                  aria-label="닫기"
-                  title="닫기"
-                >
-                  ×
-                </button>
               </div>
 
               <div className="mt-4 grid grid-cols-1 gap-3">
@@ -672,7 +663,7 @@ export default function App() {
                     onClick={() => setShowProfileGate(false)}
                     className="px-4 py-2 rounded-xl border-2 border-stone-300 bg-stone-100 text-stone-700 font-sans font-black text-sm hover:bg-stone-200"
                   >
-                    나중에 입력
+                    취소
                   </button>
                   <button
                     type="button"
