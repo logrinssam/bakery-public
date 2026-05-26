@@ -14,6 +14,7 @@ import {
   type Unsubscribe
 } from 'firebase/firestore';
 import { getFirebaseDb } from '../lib/firebase';
+import { sanitizeDisplayText, INPUT_LIMITS } from '../lib/safeStorage';
 
 const DEVICE_ID_KEY = 'pixel_bakery_device_id';
 const SESSION_LOGGED_KEY = 'pixel_bakery_session_logged';
@@ -27,6 +28,17 @@ export interface VisitStats {
 export interface SchoolVisitStats extends VisitStats {
   schoolName: string;
 }
+
+export type SchoolUserRow = {
+  nickname: string;
+  lastSeenAt: string;
+};
+
+export type SchoolUserListGroup = {
+  schoolId: string;
+  schoolName: string;
+  users: SchoolUserRow[];
+};
 
 function getOrCreateDeviceId(): string {
   let id = localStorage.getItem(DEVICE_ID_KEY);
@@ -95,6 +107,36 @@ export async function recordSessionVisit(): Promise<void> {
  * - counts session once per tab per school
  * - counts unique device once per school (best-effort, based on deviceId doc creation)
  */
+/** 교사 통계용: 학교별 닉네임(학생 saveId당 1명) — PIN/비밀번호는 저장하지 않음 */
+export async function recordSchoolUser(
+  schoolName: string,
+  nickname: string,
+  saveId: string
+): Promise<void> {
+  const db = getFirebaseDb();
+  if (!db) return;
+  const school = schoolName.trim();
+  const name = sanitizeDisplayText(nickname, INPUT_LIMITS.hallName);
+  if (!school || !name || saveId.length < 32) return;
+
+  const schoolId = (await sha256Hex(school)).slice(0, 40);
+  const ref = doc(db, 'schoolUsers', schoolId, 'users', saveId);
+
+  try {
+    await setDoc(
+      ref,
+      {
+        schoolName: school,
+        nickname: name,
+        lastSeenAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+  } catch {
+    // ignore
+  }
+}
+
 export async function recordSchoolVisit(schoolName: string): Promise<void> {
   const db = getFirebaseDb();
   if (!db) return;
@@ -157,6 +199,33 @@ export function subscribeVisitStats(
       uniqueDevices: Number(data?.uniqueDevices ?? 0)
     });
   });
+}
+
+function teacherFunctionsBase(): string {
+  const projectId = (import.meta.env.VITE_FIREBASE_PROJECT_ID ?? '').trim();
+  if (!projectId) return '';
+  return `https://asia-northeast3-${projectId}.cloudfunctions.net`;
+}
+
+/** 교사 PIN 확인 후 학교별 닉네임 목록 (학생은 읽을 수 없음) */
+export async function fetchSchoolUserLists(
+  pin: string,
+  schoolId?: string
+): Promise<SchoolUserListGroup[]> {
+  const base = teacherFunctionsBase();
+  if (!base) return [];
+  try {
+    const res = await fetch(`${base}/listSchoolUsers`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin: pin.trim(), schoolId: schoolId ?? '' }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data?.ok || !Array.isArray(data.schools)) return [];
+    return data.schools as SchoolUserListGroup[];
+  } catch {
+    return [];
+  }
 }
 
 export async function fetchTopSchoolStats(topN = 12): Promise<SchoolVisitStats[]> {

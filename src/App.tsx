@@ -21,7 +21,7 @@ import {
   primePixelSFX,
   setSfxMuted,
 } from './lib/pixelSfx';
-import { recordSchoolVisit, recordSessionVisit } from './services/firebaseVisits';
+import { recordSchoolUser, recordSchoolVisit, recordSessionVisit } from './services/firebaseVisits';
 import { ensureAnonSignedIn } from './services/firebaseAnon';
 import { loadPinSave, savePinStats } from './services/firebasePinSave';
 import { sha256Hex } from './lib/cryptoHash';
@@ -207,6 +207,10 @@ export default function App() {
           setSyncStatus('saving');
           await ensureAnonSignedIn();
           await savePinStats(pinSaveId, newStats);
+          if (newStats.hallSchool && newStats.hallName) {
+            void recordSchoolUser(newStats.hallSchool, newStats.hallName, pinSaveId);
+            void recordSchoolVisit(newStats.hallSchool);
+          }
           setSyncStatus('idle');
         } catch {
           setSyncStatus('error');
@@ -288,6 +292,9 @@ export default function App() {
       if (!remote) {
         await savePinStats(saveId, next);
       }
+
+      void recordSchoolUser(resolved, name, saveId);
+      void recordSchoolVisit(resolved);
 
       setSyncStatus('idle');
       setShowProfileGate(false);

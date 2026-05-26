@@ -24,6 +24,17 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    match /schoolUsers/{schoolId}/users/{userId} {
+      allow read: if false;
+      allow create, update: if request.auth != null
+        && schoolId.size() >= 32
+        && schoolId.size() <= 64
+        && userId.size() >= 32
+        && userId.size() <= 64
+        && isValidSchoolUser(request.resource.data);
+      allow delete: if false;
+    }
+
     match /hallRecords/{recordId} {
       allow read: if true;
       allow create: if isValidHallRecord(request.resource.data);
@@ -138,4 +149,17 @@ function isValidSchoolStatsUpdate(data) {
     && data.totalSessions <= resource.data.totalSessions + 1
     && data.uniqueDevices >= resource.data.uniqueDevices
     && data.uniqueDevices <= resource.data.uniqueDevices + 1;
+}
+
+function isValidSchoolUser(data) {
+  return data.keys().hasOnly(['schoolName', 'nickname', 'lastSeenAt'])
+    && data.schoolName is string
+    && data.schoolName.size() >= 2
+    && data.schoolName.size() <= 80
+    && data.nickname is string
+    && data.nickname.size() >= 1
+    && data.nickname.size() <= 30
+    && data.lastSeenAt is string
+    && data.lastSeenAt.size() >= 10
+    && data.lastSeenAt.size() <= 40;
 }

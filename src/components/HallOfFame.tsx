@@ -13,7 +13,9 @@ import {
   verifyTeacherPin,
   type VisitStats,
   fetchTopSchoolStats,
-  type SchoolVisitStats
+  fetchSchoolUserLists,
+  type SchoolVisitStats,
+  type SchoolUserListGroup
 } from '../services/firebaseVisits';
 import {
   filterRecordsForPublishedRanking,
@@ -100,6 +102,7 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
   const [showCertSuccessMsg, setShowCertSuccessMsg] = useState(false);
   const [visitStats, setVisitStats] = useState<VisitStats | null>(null);
   const [topSchools, setTopSchools] = useState<SchoolVisitStats[]>([]);
+  const [schoolUserLists, setSchoolUserLists] = useState<SchoolUserListGroup[]>([]);
   const [showTeacherStats, setShowTeacherStats] = useState(false);
   const [teacherPin, setTeacherPin] = useState<string | null>(null);
   const [registering, setRegistering] = useState(false);
@@ -210,14 +213,19 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
   }, [loadLocalRecords, refreshHallRecords]);
 
   useEffect(() => {
-    if (!showTeacherStats || !isFirebaseConfigured()) return;
+    if (!showTeacherStats || !isFirebaseConfigured() || !teacherPin) return;
     const unsub = subscribeVisitStats(setVisitStats);
-    void fetchTopSchoolStats(12).then(setTopSchools);
-    const id = window.setInterval(() => {
+    const refresh = () => {
       void fetchTopSchoolStats(12).then(setTopSchools);
-    }, 60_000);
-    return () => unsub?.();
-  }, [showTeacherStats]);
+      void fetchSchoolUserLists(teacherPin).then(setSchoolUserLists);
+    };
+    refresh();
+    const id = window.setInterval(refresh, 60_000);
+    return () => {
+      unsub?.();
+      window.clearInterval(id);
+    };
+  }, [showTeacherStats, teacherPin]);
 
   // Handle Certificate Image Generation & Automatic Download via canvas
   const handleDownloadCertificate = (name: string, school: string, stars: number, streak: number, dateStr: string) => {
@@ -721,6 +729,53 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
                         {s.totalSessions.toLocaleString()}회
                       </span>
                     </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white border-2 border-[#5D4037] rounded-2xl p-3 max-h-[320px] overflow-y-auto">
+            <p className="font-display font-black text-xs text-[#5D4037] mb-2 sticky top-0 bg-white pb-1">
+              👤 학교별 닉네임 목록 (교사용 · PIN 확인 후에만 표시)
+            </p>
+            {schoolUserLists.length === 0 ? (
+              <p className="text-[10px] font-sans text-stone-500 font-semibold">
+                아직 기록된 닉네임이 없습니다. 학생이 학교/닉네임 입력 후 플레이하면 여기에 쌓입니다.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {schoolUserLists.map((group) => (
+                  <div key={group.schoolId} className="border border-stone-200 rounded-xl p-2.5">
+                    <p className="font-sans font-black text-[11px] text-[#5D4037] mb-1.5">
+                      {group.schoolName || '학교'} ({group.users.length}명)
+                    </p>
+                    {group.users.length === 0 ? (
+                      <p className="text-[10px] text-stone-400">—</p>
+                    ) : (
+                      <ul className="flex flex-col gap-1">
+                        {group.users.map((u, i) => (
+                          <li
+                            key={`${group.schoolId}-${i}-${u.nickname}`}
+                            className="flex justify-between gap-2 text-[10px] font-sans font-semibold text-stone-700"
+                          >
+                            <span className="truncate">{u.nickname}</span>
+                            <span className="text-stone-400 shrink-0 font-mono text-[9px]">
+                              {u.lastSeenAt
+                                ? new Intl.DateTimeFormat('ko-KR', {
+                                    month: 'numeric',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    hour12: false,
+                                    timeZone: 'Asia/Seoul',
+                                  }).format(new Date(u.lastSeenAt))
+                                : '—'}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 ))}
               </div>
