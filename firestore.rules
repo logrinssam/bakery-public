@@ -56,6 +56,13 @@ service cloud.firestore {
       allow update: if isValidStatsUpdate(request.resource.data);
       allow delete: if false;
     }
+
+    match /meta/schools {
+      allow read: if true;
+      allow create: if isValidSchoolsMetaCreate(request.resource.data);
+      allow update: if isValidSchoolsMetaUpdate(request.resource.data);
+      allow delete: if false;
+    }
   }
 }
 
@@ -129,6 +136,18 @@ function isValidStatsUpdate(data) {
     && data.totalSessions <= resource.data.totalSessions + 1
     && data.uniqueDevices >= resource.data.uniqueDevices
     && data.uniqueDevices <= resource.data.uniqueDevices + 1;
+}
+
+function isValidSchoolsMetaCreate(data) {
+  return data.keys().hasOnly(['uniqueSchools', 'updatedAt'])
+    && data.uniqueSchools == 1;
+}
+
+function isValidSchoolsMetaUpdate(data) {
+  return data.keys().hasAll(['uniqueSchools'])
+    && data.uniqueSchools is int
+    && resource.data.uniqueSchools is int
+    && request.resource.data.uniqueSchools == resource.data.uniqueSchools + 1;
 }
 
 function isValidSchoolStatsCreate(data) {

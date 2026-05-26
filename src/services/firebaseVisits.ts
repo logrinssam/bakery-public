@@ -110,7 +110,26 @@ export async function recordSchoolUser(
   }
 }
 
-export async function recordSchoolVisit(schoolName: string): Promise<void> {
+async function incrementUniqueSchoolsMeta(db: NonNullable<ReturnType<typeof getFirebaseDb>>): Promise<void> {
+  const schoolsMetaRef = doc(db, 'meta', 'schools');
+  const snap = await getDoc(schoolsMetaRef);
+  if (!snap.exists()) {
+    await setDoc(schoolsMetaRef, {
+      uniqueSchools: 1,
+      updatedAt: serverTimestamp(),
+    });
+  } else {
+    await updateDoc(schoolsMetaRef, {
+      uniqueSchools: increment(1),
+      updatedAt: serverTimestamp(),
+    });
+  }
+}
+
+export async function recordSchoolVisit(
+  schoolName: string,
+  options?: { force?: boolean }
+): Promise<void> {
   const db = getFirebaseDb();
   if (!db) return;
   const school = schoolName.trim();
@@ -119,11 +138,12 @@ export async function recordSchoolVisit(schoolName: string): Promise<void> {
   const deviceId = getOrCreateDeviceId();
   const schoolId = (await sha256Hex(school)).slice(0, 40);
   const sessionKey = `${SCHOOL_SESSION_PREFIX}${schoolId}`;
-  if (sessionStorage.getItem(sessionKey)) return;
+  if (!options?.force && sessionStorage.getItem(sessionKey)) return;
 
   const statsRef = doc(db, 'schoolStats', schoolId);
   const visitorRef = doc(db, 'schoolVisitors', schoolId, 'devices', deviceId);
 
+  let wroteSchoolStats = false;
   try {
     const statsSnap = await getDoc(statsRef);
     if (!statsSnap.exists()) {
@@ -133,13 +153,23 @@ export async function recordSchoolVisit(schoolName: string): Promise<void> {
         uniqueDevices: 0,
         updatedAt: serverTimestamp(),
       });
+      try {
+        await incrementUniqueSchoolsMeta(db);
+      } catch {
+        // meta/schools is optional; schoolStats row is what matters
+      }
     } else {
       await updateDoc(statsRef, {
         totalSessions: increment(1),
         updatedAt: serverTimestamp(),
       });
     }
+    wroteSchoolStats = true;
+  } catch {
+    // schoolStats / meta write failed (often: rules not deployed)
+  }
 
+  try {
     const visitorSnap = await getDoc(visitorRef);
     if (!visitorSnap.exists()) {
       await setDoc(visitorRef, {
@@ -151,9 +181,11 @@ export async function recordSchoolVisit(schoolName: string): Promise<void> {
         updatedAt: serverTimestamp(),
       });
     }
-
-    sessionStorage.setItem(sessionKey, '1');
   } catch {
-    // ignore — stats are non-critical
+    // visitor subcollection is optional for school totals
+  }
+
+  if (wroteSchoolStats) {
+    sessionStorage.setItem(sessionKey, '1');
   }
 }

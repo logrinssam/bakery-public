@@ -219,16 +219,27 @@ export default function App() {
     }
   };
 
+  const isProfileComplete = () =>
+    Boolean(stats.hallName?.trim() && stats.hallSchool?.trim() && pinSaveId);
+
+  const requireProfileForPlay = (): boolean => {
+    if (isProfileComplete()) return true;
+    setProfileName(stats.hallName ?? '');
+    setProfileSchoolQuery(stats.hallSchool ?? '');
+    setProfilePin('');
+    setProfileError(null);
+    setShowProfileGate(true);
+    return false;
+  };
+
+  const openPlayPage = (target: 'map' | 'kitchen' | 'upgrades') => {
+    if (!requireProfileForPlay()) return;
+    setPage(target);
+  };
+
   const handleStartGame = () => {
     primePixelSFX();
-    if (!stats.hallName || !stats.hallSchool || !pinSaveId) {
-      setProfileName(stats.hallName ?? '');
-      setProfileSchoolQuery(stats.hallSchool ?? '');
-      setProfilePin('');
-      setProfileError(null);
-      setShowProfileGate(true);
-      return;
-    }
+    if (!requireProfileForPlay()) return;
     setPage('map');
   };
 
@@ -274,13 +285,11 @@ export default function App() {
 
     try {
       const remote = await loadPinSave(saveId, INITIAL_STATS);
-      const next = remote
-        ? remote
-        : {
-            ...stats,
-            hallName: name,
-            hallSchool: resolved,
-          };
+      const next: PlayerStats = {
+        ...(remote ?? stats),
+        hallName: name,
+        hallSchool: resolved,
+      };
 
       setStats(next);
       try {
@@ -289,12 +298,10 @@ export default function App() {
         // ignore quota
       }
 
-      if (!remote) {
-        await savePinStats(saveId, next);
-      }
+      await savePinStats(saveId, next);
 
       void recordSchoolUser(resolved, name, saveId);
-      void recordSchoolVisit(resolved);
+      void recordSchoolVisit(resolved, { force: true });
 
       setSyncStatus('idle');
       setShowProfileGate(false);
@@ -337,6 +344,8 @@ export default function App() {
   };
 
   const handleSelectStage = (stageId: number) => {
+    if (!requireProfileForPlay()) return;
+
     const stage = STAGES.find(s => s.id === stageId);
     if (!stage) return;
 
@@ -365,7 +374,7 @@ export default function App() {
       encounteredMascotNames: updatedMascots
     });
     
-    setPage('kitchen');
+    openPlayPage('kitchen');
   };
 
   const handleSubmitAnswer = (userAns: string) => {
@@ -501,7 +510,7 @@ export default function App() {
       });
 
       alert(`🎉 축하합니다! ${clearedStageId}단계를 최고 실력으로 완료하고 단골 주문을 대성공했습니다!\n\n베이커리 매장 확장 축하 보너스: +${completionBonus} G 지급 완료!`);
-      setPage('map');
+      openPlayPage('map');
       setActiveStageId(null);
     }
   };
@@ -663,7 +672,7 @@ export default function App() {
               <div className="flex items-center gap-1 sm:gap-1.5">
                 <button
                   type="button"
-                  onClick={() => setPage('map')}
+                  onClick={() => openPlayPage('map')}
                   className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl border-2 cursor-pointer transition-all font-sans text-[10px] sm:text-xs font-black tracking-tight flex items-center gap-0.5 sm:gap-1 shadow-[1.5px_1.5px_0px_rgba(0,0,0,0.3)] active:translate-y-[1.5px] active:shadow-none ${
                     page === 'map' 
                       ? 'bg-[#FF85A1] border-[#5D4037] text-white' 
@@ -943,7 +952,7 @@ export default function App() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setPage('upgrades')}
+                  onClick={() => openPlayPage('upgrades')}
                   className="btn-pixel-pink px-2.5 sm:px-3.5 py-1.5 rounded-xl text-[10px] sm:text-xs cursor-pointer shrink-0"
                 >
                   도구 상점
@@ -1160,7 +1169,7 @@ export default function App() {
                     type="button"
                     onClick={() => {
                       if (window.confirm('정말 스테이지 해결을 멈추고 맵으로 돌아가겠습니까? 진행 사항을 잃게 됩니다.')) {
-                        setPage('map');
+                        openPlayPage('map');
                         setActiveStageId(null);
                       }
                     }}
@@ -1223,7 +1232,7 @@ export default function App() {
             gold={stats.gold}
             unlockedIds={stats.purchasedEquipmentIds}
             onPurchase={handleBuyEquipment}
-            onBack={() => setPage('map')}
+            onBack={() => openPlayPage('map')}
           />
         )}
 
@@ -1231,7 +1240,7 @@ export default function App() {
         {page === 'fame' && (
           <HallOfFame
             stats={stats}
-            onClose={() => setPage('map')}
+            onClose={() => openPlayPage('map')}
             onRegister={handleRegisterToHallOfFame}
           />
         )}
@@ -1242,7 +1251,7 @@ export default function App() {
             unlockedBreadIndices={stats.unlockedBreadIndices || []}
             encounteredMascotNames={stats.encounteredMascotNames || []}
             stageProgress={stats.stageProgress}
-            onBack={() => setPage('map')}
+            onBack={() => openPlayPage('map')}
           />
         )}
 

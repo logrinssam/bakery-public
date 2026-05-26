@@ -578,23 +578,6 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
             </div>
           )}
         </div>
-
-        {/* Level summary badges */}
-        <div className="flex flex-wrap gap-2.5 items-center text-xs">
-          <div className="bg-[#FFF4E0] border-4 border-[#5D4037] text-[#5D4037] rounded-2xl px-5 py-2 font-display font-black flex items-center gap-2 shadow-sm">
-            <Trophy className="w-4 h-4 text-[#F4D03F]" />
-            공개 명단: {publishedRecords.length}명
-            {records.length > publishedRecords.length && (
-              <span className="text-[9px] font-sans font-bold text-stone-500">
-                (전체 등록 {records.length}명)
-              </span>
-            )}
-          </div>
-          <div className="bg-amber-100 border-4 border-[#5D4037] text-[#5D4037] rounded-2xl px-5 py-2 font-display font-black flex items-center gap-2 shadow-sm">
-            <School className="w-4 h-4 text-amber-700" />
-            참가 베이커리 학교수: {schoolRanksList.length}개교
-          </div>
-        </div>
       </div>
 
       {/* [Feature addition] Live Certificate Preview Mockup Section */}
