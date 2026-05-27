@@ -6,6 +6,7 @@ import { PixelSprite, BREADS_METADATA } from './components/PixelSprite';
 import { MathQuestionBox } from './components/MathQuestionBox';
 import { CabinetScreen } from './components/CabinetScreen';
 import { HallOfFame } from './components/HallOfFame';
+import { AppUpdateBanner } from './components/AppUpdateBanner';
 import { InteractiveBacking } from './components/InteractiveBacking';
 import { CollectionBook } from './components/CollectionBook';
 import {
@@ -700,7 +701,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#FDF6E3] flex flex-col items-center justify-between font-sans selection:bg-brand-pink/30 scrollbar-thin">
-      
+      <AppUpdateBanner />
+
       {/* 1. Global Navigation Bar */}
       <header className="w-full bg-[#5D4037] text-white border-b-4 border-[#F4D03F] sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2 sm:py-3 flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">

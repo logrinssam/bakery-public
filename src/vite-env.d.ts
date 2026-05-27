@@ -15,3 +15,6 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+/** vite app-version 플러그인 (production 빌드) */
+declare const __APP_BUILD_ID__: string;
