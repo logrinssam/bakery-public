@@ -89,7 +89,7 @@ const PORTAL_HOME_URL = 'https://로그인교실.com';
  */
 const COPYRIGHT_NOTICE = 'UI/그래픽 및 리소스 무단 복제·재배포 금지 (© 로그린쌤)';
 
-import { loadElementarySchools, resolveSchoolName, searchSchools } from './data/schools';
+import { loadElementarySchools, resolveSchoolForInput, searchSchools } from './data/schools';
 
 export default function App() {
   const [stats, setStats] = useState<PlayerStats>(INITIAL_STATS);
@@ -119,6 +119,7 @@ export default function App() {
   const [profileSchoolQuery, setProfileSchoolQuery] = useState('');
   const [profilePin, setProfilePin] = useState('');
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [profileSchoolManual, setProfileSchoolManual] = useState(false);
   const [allowedSchools, setAllowedSchools] = useState<string[]>([]);
   const [schoolsReady, setSchoolsReady] = useState(false);
 
@@ -220,10 +221,17 @@ export default function App() {
 
   const requireProfileForPlay = (): boolean => {
     if (isProfileComplete()) return true;
+    const existingSchool = stats.hallSchool?.trim() ?? '';
     setProfileName(stats.hallName ?? '');
-    setProfileSchoolQuery(stats.hallSchool ?? '');
+    setProfileSchoolQuery(existingSchool);
     setProfilePin('');
     setProfileError(null);
+    if (existingSchool && schoolsReady) {
+      const inList = resolveSchoolForInput(existingSchool, allowedSchools, false);
+      setProfileSchoolManual(!inList);
+    } else {
+      setProfileSchoolManual(false);
+    }
     setShowProfileGate(true);
     return false;
   };
@@ -246,21 +254,29 @@ export default function App() {
       return;
     }
 
-    if (!schoolsReady) {
+    if (!schoolsReady && !profileSchoolManual) {
       setProfileError('학교 목록을 불러오는 중입니다. 잠시만 기다려 주세요.');
       return;
     }
 
-    if (allowedSchools.length === 0) {
+    if (!profileSchoolManual && allowedSchools.length === 0) {
       setProfileError(
-        '학교 목록 파일을 불러오지 못했습니다. 페이지를 새로고침하거나 잠시 후 다시 시도해 주세요.'
+        '학교 목록을 불러오지 못했습니다. 아래 "목록에 없어요"를 체크한 뒤 공식 학교명을 입력해 주세요.'
       );
       return;
     }
 
-    const resolved = resolveSchoolName(profileSchoolQuery, allowedSchools);
+    const resolved = resolveSchoolForInput(
+      profileSchoolQuery,
+      allowedSchools,
+      profileSchoolManual
+    );
     if (!resolved) {
-      setProfileError('학교 이름을 목록에서 정확히 선택해 주세요.');
+      setProfileError(
+        profileSchoolManual
+          ? '초등학교 공식 명칭을 입력해 주세요. (예: ○○초등학교, "초등"이 들어가야 합니다)'
+          : '목록에서 학교를 선택해 주세요. 없으면 아래 "목록에 우리 학교가 없어요"를 체크해 주세요.'
+      );
       return;
     }
 
@@ -779,19 +795,47 @@ export default function App() {
                   <span className="font-sans text-xs text-stone-600 font-black">학교</span>
                   <input
                     value={profileSchoolQuery}
-                    onChange={(e) => setProfileSchoolQuery(e.target.value)}
+                    onChange={(e) => {
+                      setProfileSchoolQuery(e.target.value);
+                      setProfileError(null);
+                    }}
                     className="mt-1 w-full px-3 py-2 rounded-xl border-2 border-[#5D4037]/30 focus:border-[#FF85A1] focus:outline-none font-sans font-bold text-sm"
-                    placeholder={schoolsReady ? '예: 서울○○초등학교' : '학교 목록 불러오는 중…'}
-                    list="pb-school-datalist"
-                    disabled={!schoolsReady}
+                    placeholder={
+                      profileSchoolManual
+                        ? '예: 서울○○초등학교 (공식 명칭)'
+                        : schoolsReady
+                          ? '예: 서울○○초등학교'
+                          : '학교 목록 불러오는 중…'
+                    }
+                    list={profileSchoolManual ? undefined : 'pb-school-datalist'}
+                    maxLength={INPUT_LIMITS.hallSchool}
+                    disabled={!schoolsReady && !profileSchoolManual}
                   />
-                  <datalist id="pb-school-datalist">
-                    {searchSchools(profileSchoolQuery, allowedSchools, 16).map((s) => (
-                      <option key={s} value={s} />
-                    ))}
-                  </datalist>
+                  {!profileSchoolManual && (
+                    <datalist id="pb-school-datalist">
+                      {searchSchools(profileSchoolQuery, allowedSchools, 16).map((s) => (
+                        <option key={s} value={s} />
+                      ))}
+                    </datalist>
+                  )}
+                  <label className="mt-2 flex items-start gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={profileSchoolManual}
+                      onChange={(e) => {
+                        setProfileSchoolManual(e.target.checked);
+                        setProfileError(null);
+                      }}
+                      className="mt-0.5 shrink-0"
+                    />
+                    <span className="text-[10px] font-sans text-stone-600 font-semibold break-keep leading-snug">
+                      목록에 우리 학교가 없어요 (공식 학교명 직접 입력)
+                    </span>
+                  </label>
                   <p className="mt-1 text-[10px] font-sans text-stone-500 font-semibold break-keep">
-                    학교 이름을 몇 글자 입력하면 목록이 뜹니다. 목록에서 선택해 주세요.
+                    {profileSchoolManual
+                      ? '교육부 목록에 없는 학교는 공식 명칭 그대로 입력해 주세요. 오타는 학교 순위 집계에 영향을 줄 수 있어요.'
+                      : '몇 글자 입력하면 목록이 뜹니다. 목록에서 선택하는 것이 가장 정확해요.'}
                   </p>
                 </label>
 
@@ -827,16 +871,18 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => void handleSaveProfile()}
-                    disabled={syncStatus === 'loading' || !schoolsReady}
+                    disabled={
+                      syncStatus === 'loading' || (!schoolsReady && !profileSchoolManual)
+                    }
                     className={`px-4 py-2 rounded-xl border-2 border-[#5D4037] font-sans font-black text-sm ${
-                      syncStatus === 'loading' || !schoolsReady
+                      syncStatus === 'loading' || (!schoolsReady && !profileSchoolManual)
                         ? 'bg-stone-300 text-stone-500 cursor-not-allowed'
                         : 'bg-[#FF85A1] text-white hover:bg-[#FF9FB6] cursor-pointer'
                     }`}
                   >
                     {syncStatus === 'loading'
                       ? '저장 중…'
-                      : !schoolsReady
+                      : !schoolsReady && !profileSchoolManual
                         ? '학교 목록 불러오는 중…'
                         : '저장하고 시작'}
                   </button>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { PlayerStats, HallRecord } from '../types';
-import { loadElementarySchools, resolveSchoolName, searchSchools } from '../data/schools';
+import { loadElementarySchools, resolveSchoolForInput, searchSchools } from '../data/schools';
 import {
   isFirebaseConfigured,
   fetchHallRecords,
@@ -87,6 +87,7 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
   const [schoolQuery, setSchoolQuery] = useState('');
   const [userComment, setUserComment] = useState('');
   const [schoolError, setSchoolError] = useState('');
+  const [schoolManual, setSchoolManual] = useState(false);
   const [allowedSchools, setAllowedSchools] = useState<string[]>([]);
   const [schoolsReady, setSchoolsReady] = useState(false);
   const [registered, setRegistered] = useState(false);
@@ -378,18 +379,25 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
     if (!userName.trim() || !schoolQuery.trim() || !userComment.trim()) return;
     if (registering) return;
 
-    if (!schoolsReady || allowedSchools.length === 0) {
+    if (!schoolsReady && !schoolManual) {
+      setSchoolError('학교 목록을 불러오는 중입니다. 잠시 후 다시 시도해 주세요.');
+      return;
+    }
+
+    if (!schoolManual && allowedSchools.length === 0) {
       setSchoolError(
-        schoolsReady && allowedSchools.length === 0
-          ? '학교 목록 파일이 없습니다. data/elementary-schools.csv 를 넣고 npm run build:schools 실행 후 배포해 주세요.'
-          : '학교 목록을 불러오는 중입니다. 잠시 후 다시 시도해 주세요.'
+        '학교 목록을 불러오지 못했습니다. "목록에 없어요"를 체크한 뒤 공식 학교명을 입력해 주세요.'
       );
       return;
     }
 
-    const resolvedSchool = resolveSchoolName(schoolQuery, allowedSchools);
+    const resolvedSchool = resolveSchoolForInput(schoolQuery, allowedSchools, schoolManual);
     if (!resolvedSchool) {
-      setSchoolError('실제 초등학교만 등록할 수 있습니다. 목록에서 학교명을 골라 주세요.');
+      setSchoolError(
+        schoolManual
+          ? '초등학교 공식 명칭을 입력해 주세요. (예: ○○초등학교, "초등" 포함)'
+          : '목록에서 학교를 선택해 주세요. 없으면 "목록에 없어요"를 체크해 주세요.'
+      );
       return;
     }
 
@@ -689,33 +697,59 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="font-sans text-xs text-stone-500 font-bold" htmlFor="fame-school">🏫 초등학교명 (목록에서 선택)</label>
+                <label className="font-sans text-xs text-stone-500 font-bold" htmlFor="fame-school">
+                  🏫 초등학교명 {schoolManual ? '(직접 입력)' : '(목록에서 선택)'}
+                </label>
                 <input
                   type="text"
                   id="fame-school"
-                  list="fame-school-suggestions"
+                  list={schoolManual ? undefined : 'fame-school-suggestions'}
                   value={schoolQuery}
                   onChange={(e) => {
                     setSchoolQuery(e.target.value);
                     setSchoolError('');
                   }}
                   maxLength={INPUT_LIMITS.hallSchool}
-                  placeholder={schoolsReady ? '학교명 입력 후 목록에서 선택' : '학교 목록 불러오는 중...'}
+                  placeholder={
+                    schoolManual
+                      ? '예: ○○초등학교 (공식 명칭)'
+                      : schoolsReady
+                        ? '학교명 입력 후 목록에서 선택'
+                        : '학교 목록 불러오는 중...'
+                  }
                   autoComplete="off"
                   required
-                  disabled={!schoolsReady}
+                  disabled={!schoolsReady && !schoolManual}
                   className="bg-white border-4 border-[#5D4037] rounded-2xl px-4 py-3 font-sans text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#FF85A1]/20 shadow-sm disabled:opacity-60"
                 />
-                <datalist id="fame-school-suggestions">
-                  {searchSchools(schoolQuery, allowedSchools, 15).map((school) => (
-                    <option key={school} value={school} />
-                  ))}
-                </datalist>
+                {!schoolManual && (
+                  <datalist id="fame-school-suggestions">
+                    {searchSchools(schoolQuery, allowedSchools, 15).map((school) => (
+                      <option key={school} value={school} />
+                    ))}
+                  </datalist>
+                )}
+                <label className="flex items-start gap-2 cursor-pointer mt-1">
+                  <input
+                    type="checkbox"
+                    checked={schoolManual}
+                    onChange={(e) => {
+                      setSchoolManual(e.target.checked);
+                      setSchoolError('');
+                    }}
+                    className="mt-0.5 shrink-0"
+                  />
+                  <span className="font-sans text-[10px] text-stone-600 font-semibold break-keep leading-snug">
+                    목록에 우리 학교가 없어요
+                  </span>
+                </label>
                 {schoolError && (
                   <p className="font-sans text-[11px] text-red-600 font-bold">{schoolError}</p>
                 )}
-                {schoolsReady && allowedSchools.length > 0 && (
-                  <p className="font-sans text-[10px] text-stone-500">전국 실제 초등학교 {allowedSchools.length.toLocaleString()}곳 중에서만 등록됩니다.</p>
+                {schoolsReady && allowedSchools.length > 0 && !schoolManual && (
+                  <p className="font-sans text-[10px] text-stone-500">
+                    전국 초등학교 {allowedSchools.length.toLocaleString()}곳 목록에서 선택 (없으면 위 체크)
+                  </p>
                 )}
               </div>
 
