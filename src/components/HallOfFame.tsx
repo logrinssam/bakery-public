@@ -41,6 +41,8 @@ import {
 
 const HALL_AUTO_REFRESH_MS = 60 * 60 * 1000;
 const HALL_MANUAL_COOLDOWN_MS = 30 * 60 * 1000;
+const HALL_CACHE_TTL_MS = 30 * 60 * 1000;
+const HALL_CACHE_TIME_KEY = 'pixel_bakery_hall_records_fetched_at_v1';
 
 function formatHallClockTime(date: Date | null): string {
   if (!date) return '—';
@@ -144,7 +146,7 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
   }, []);
 
   const refreshHallRecords = useCallback(
-    async (options?: { bypassCooldown?: boolean; isManual?: boolean }) => {
+    async (options?: { bypassCooldown?: boolean; isManual?: boolean; forceRemote?: boolean }) => {
       if (!isFirebaseConfigured()) {
         loadLocalRecords();
         return;
@@ -159,14 +161,27 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
         return;
       }
 
+      const local = loadLocalRecords();
+      const cachedAt = Number(localStorage.getItem(HALL_CACHE_TIME_KEY) || 0);
+      const cacheFresh =
+        cachedAt > 0 && Date.now() - cachedAt < HALL_CACHE_TTL_MS;
+
+      if (!options?.forceRemote && !options?.isManual && cacheFresh) {
+        return;
+      }
+
       setRefreshing(true);
       setRefreshError(null);
 
       try {
-        const local = loadLocalRecords();
         const remote = await fetchHallRecords();
         const merged = mergeHallRecords(remote, local);
         persistRecords(merged);
+        try {
+          localStorage.setItem(HALL_CACHE_TIME_KEY, String(Date.now()));
+        } catch {
+          // ignore quota
+        }
 
         if (options?.isManual && !options?.bypassCooldown) {
           const now = Date.now();
@@ -303,7 +318,7 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
     ctx.fillStyle = '#E67E22';
     ctx.font = 'bold 15px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(`★ 최종 영광 기록 :  누적 별점 ${stars}개 획득  /  연속 정답기록 ${streak}콤보 달성 ★`, 500, currentY + 48);
+    ctx.fillText(`★ 최종 영광 기록 :  스테이지 ${stars}단계 클리어  /  연속 정답기록 ${streak}콤보 달성 ★`, 500, currentY + 48);
 
     // 6. Footer / Date / Official Seal
     ctx.fillStyle = '#7F8C8D';
@@ -423,7 +438,7 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
     setRegistering(false);
 
     if (isFirebaseConfigured()) {
-      await refreshHallRecords({ bypassCooldown: true });
+      await refreshHallRecords({ bypassCooldown: true, forceRemote: true });
     }
 
     handleDownloadCertificate(
@@ -632,7 +647,7 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
           {/* Achievement summary strip layout */}
           <div className="my-6 bg-[#FFF4E0] border-2 border-dashed border-[#5D4037] rounded-xl py-3 px-4 max-w-md mx-auto">
             <p className="font-sans font-black text-[#E67E22] text-[11px] tracking-wide">
-              ★ 누적 별점 {stats.starsEarned || 150}개 획득 &nbsp;|&nbsp; 최고 연속 정답 {stats.highestStreak || 12}콤보 ★
+              ★ 스테이지 {stats.starsEarned || 0}단계 클리어 &nbsp;|&nbsp; 최고 연속 정답 {stats.highestStreak || 0}콤보 ★
             </p>
           </div>
           
@@ -826,7 +841,7 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
               <Trophy className="w-5 h-5 text-[#F4D03F]" />
               현재 서약된 수석 파티셰 명단 ({sortedIndividualRecords.length}명)
             </h2>
-            <span className="font-sans text-[10px] text-amber-800 font-bold">⭐ 높은 별점 우선 정렬</span>
+            <span className="font-sans text-[10px] text-amber-800 font-bold">⭐ 클리어 단계 많은 순</span>
           </div>
 
           {sortedIndividualRecords.length === 0 ? (
@@ -898,9 +913,9 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
                             {rec.schoolName || '무소속'}
                           </span>
 
-                          {rec.stars >= 140 && (
+                          {rec.stars >= 45 && (
                             <span className="bg-amber-50 text-amber-800 border-2 border-amber-300 text-[9px] font-sans font-black px-1.5 py-0.5 rounded-md">
-                              ⭐ 초정밀 비율가 (140성+)
+                              ⭐ 마스터 파티셰 (45단계+)
                             </span>
                           )}
                           {rec.highestStreak >= 15 && (

@@ -2,13 +2,27 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import obfuscator from 'rollup-plugin-obfuscator';
-import {defineConfig} from 'vite';
+import {defineConfig, type Plugin} from 'vite';
+
+const DEFAULT_PUBLIC_APP_URL = 'https://pixel-bakery.xn--9d0blmm1xg2knrf.com';
+
+function publicAppUrlPlugin(): Plugin {
+  const base = (
+    process.env.VITE_PUBLIC_APP_URL?.trim() || DEFAULT_PUBLIC_APP_URL
+  ).replace(/\/$/, '');
+  return {
+    name: 'public-app-url',
+    transformIndexHtml(html) {
+      return html.replaceAll('__PUBLIC_APP_URL__', base);
+    },
+  };
+}
 
 export default defineConfig(({mode}) => {
   const production = mode === 'production';
 
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [publicAppUrlPlugin(), react(), tailwindcss()],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),

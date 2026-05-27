@@ -1,5 +1,7 @@
 import { Stage, ShopType, MathQuestion, QuestionCategory } from '../types';
 
+export const TOTAL_STAGE_COUNT = 50;
+
 export const STAGES: Stage[] = [
   // 1-10 Cookie Shop
   { id: 1, name: '쿠키 상점 1', representativeMenu: '기본 라운드 쿠키', shopType: ShopType.COOKIE, backgroundImage: '/assets/shops/shop_cookie.png', requiredStars: 0, goldMultiplier: 1.0, theme: '기본 비의 성질' },
@@ -77,6 +79,36 @@ export function getQuestionsPerStage(stageId: number): number {
   return 10;
 }
 
+/** 같은 수끼리 비(8:8 등) — 약 1%만 허용 */
+const EQUAL_PAIR_CHANCE_BP = 100;
+
+/**
+ * 두 수를 뽑되, 기본적으로 서로 다르게 (같은 숫자 비·비교는 ~1%만).
+ */
+export function pickDistinctPair(
+  seed: number,
+  minA: number,
+  maxA: number,
+  minB: number,
+  maxB: number
+): { a: number; b: number } {
+  const spanA = maxA - minA + 1;
+  const spanB = maxB - minB + 1;
+  let a = minA + (Math.abs(seed) % spanA);
+  let b = minB + (Math.abs(seed * 3 + 11) % spanB);
+  const allowEqual = (Math.abs(seed * 7919 + 104729) % 10000) < EQUAL_PAIR_CHANCE_BP;
+  if (a === b && !allowEqual) {
+    if (spanB > 1) {
+      b = b >= maxB ? b - 1 : b + 1;
+      if (b === a && b > minB) b -= 1;
+      else if (b === a && b < maxB) b += 1;
+    } else if (spanA > 1) {
+      a = a >= maxA ? a - 1 : a + 1;
+    }
+  }
+  return { a, b };
+}
+
 // Helper to determine clean whole number factors
 function getCleanFraction(seed: number): { numerator: number; denominator: number; decimal: number; percent: number } {
   const choices = [
@@ -107,6 +139,42 @@ function getCleanFraction(seed: number): { numerator: number; denominator: numbe
   return choices[seed % choices.length];
 }
 
+function gcd(a: number, b: number): number {
+  let x = Math.abs(a);
+  let y = Math.abs(b);
+  while (y !== 0) {
+    const t = y;
+    y = x % y;
+    x = t;
+  }
+  return x || 1;
+}
+
+function toLowestFraction(numerator: number, denominator: number): { num: number; den: number } {
+  const g = gcd(numerator, denominator);
+  return { num: numerator / g, den: denominator / g };
+}
+
+function fractionText(numerator: number, denominator: number): string {
+  return `${numerator}/${denominator}`;
+}
+
+function gcdInt(a: number, b: number): number {
+  let x = Math.abs(a);
+  let y = Math.abs(b);
+  while (y !== 0) {
+    const t = y;
+    y = x % y;
+    x = t;
+  }
+  return x || 1;
+}
+
+function denomForPercent(pct: number): number {
+  // minimum denominator that makes (total * pct/100) an integer when total is multiple of this
+  return 100 / gcdInt(pct, 100);
+}
+
 export function generateQuestionsForStage(stageId: number): MathQuestion[] {
   const stage = STAGES.find(s => s.id === stageId) || STAGES[0];
   const questions: MathQuestion[] = [];
@@ -122,8 +190,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
       // 1-10: Basic Ratio Expression
       if (slot === 1) {
         // Simple Ratio count
-        const countA = 3 + (seed % 6);
-        const countB = 2 + ((seed + 2) % 5);
+        const { a: countA, b: countB } = pickDistinctPair(seed, 3, 8, 2, 6);
         questions.push({
           id,
           category: QuestionCategory.RATIO_EXPRESSION,
@@ -136,8 +203,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
         });
       } else if (slot === 2) {
         // A에 대한 B의 비와 같은 함정 문제
-        const compareVal = 2 + (seed % 5);
-        const baseVal = 5 + ((seed + 1) % 6);
+        const { a: compareVal, b: baseVal } = pickDistinctPair(seed, 2, 6, 5, 10);
         // "A에 대한 B의 비", comparing is B (compareVal), basis is A (baseVal). So ratio is B:A (compareVal:baseVal)
         questions.push({
           id,
@@ -150,8 +216,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
         });
       } else if (slot === 3) {
         // 기준량 맞추기
-        const countA = 4 + (seed % 6);
-        const countB = 7 + ((seed + 3) % 4);
+        const { a: countA, b: countB } = pickDistinctPair(seed, 4, 9, 7, 10);
         questions.push({
           id,
           category: QuestionCategory.RATIO_EXPRESSION,
@@ -163,8 +228,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
         });
       } else if (slot === 4) {
         // 비교하는 양 맞추기
-        const countA = 5 + (seed % 5);
-        const countB = 9 + ((seed + 1) % 4);
+        const { a: countA, b: countB } = pickDistinctPair(seed, 5, 9, 9, 12);
         questions.push({
           id,
           category: QuestionCategory.RATIO_EXPRESSION,
@@ -176,8 +240,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
         });
       } else {
         // Interactive Ratio builder representation
-        const countA = 2 + (seed % 4);
-        const countB = 3 + ((seed + 2) % 4);
+        const { a: countA, b: countB } = pickDistinctPair(seed, 2, 5, 3, 6);
         questions.push({
           id,
           category: QuestionCategory.INGREDIENT_RATIO_BUILDER,
@@ -207,16 +270,16 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
         // Comparing A vs B ratio value
         const valA = 3 + (seed % 6);
         const valB = 10;
+        const raw = fractionText(valA, valB);
+        const { num, den } = toLowestFraction(valA, valB);
+        const reduced = fractionText(num, den);
         questions.push({
           id,
           category: QuestionCategory.RATIO_VALUE_FRACTION,
           questionText: `우리 컵케이크 상점에는 바닐라 오일 ${valA}L와 물 ${valB}L를 혼합한 특제 소스가 있습니다. '물 양에 대한 바닐라 오일 양의 비율'을 기약분수로 나타내세요.`,
-          correctAnswer: `${valA / 2 === Math.floor(valA / 2) && valB / 2 === Math.floor(valB / 2) ? (valA / 2) + '/' + (valB / 2) : valA + '/' + valB}`,
-          acceptableAnswers: [
-            `${valA}/${valB}`,
-            `${valA / 2 === Math.floor(valA / 2) ? (valA / 2) + '/' + (valB / 2) : valA + '/' + valB}`
-          ],
-          hint: '물에 대한 비율이므로 기준량은 물(10)입니다. 비율은 기약분수 형태로 약분하여도 정답 인정됩니다.'
+          correctAnswer: reduced,
+          acceptableAnswers: [reduced],
+          hint: `물에 대한 비율이므로 기준량은 물(${valB})입니다. ${raw}을 기약분수로 약분하면 ${reduced}입니다. (기약분수만 정답 처리)`
         });
       } else if (slot === 3) {
         // Percentage conversion basic
@@ -243,7 +306,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
         });
       } else {
         // Interactive Ratio Builder
-        const countA = 1 + (seed % 3);
+        const { a: countA } = pickDistinctPair(seed, 1, 3, 4, 4);
         const countB = 4;
         questions.push({
           id,
@@ -326,8 +389,11 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
       if (slot === 1 || slot === 3) {
         const findVariant = (slot + seed + stageId) % 4;
         if (findVariant === 0) {
-          const total = 20 + (seed % 5) * 5;
-          const part = Math.round(total * (frac.percent / 100));
+          // Ensure part/total matches frac exactly (avoid rounding mismatch like 3/20 shown but 16% answer)
+          let k = 2 + (seed % 6); // scale factor
+          while (frac.denominator * k < 20) k += 1;
+          const total = frac.denominator * k;
+          const part = frac.numerator * k;
           questions.push({
             id,
             category: QuestionCategory.PERCENTAGE_CONVERSION,
@@ -350,9 +416,11 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
             hint: `소수 ${decimalVal} × 100 = ${ansPercent}%`
           });
         } else if (findVariant === 2) {
-          const numer = 2 + (seed % 4);
-          const denom = numer + 3 + (seed % 3);
-          const pct = Math.round((numer / denom) * 100);
+          // Use a clean fraction so percent is an integer (no rounding needed)
+          const f = getCleanFraction(seed + 7);
+          const numer = f.numerator;
+          const denom = f.denominator;
+          const pct = f.percent;
           questions.push({
             id,
             category: QuestionCategory.PERCENTAGE_CONVERSION,
@@ -378,9 +446,11 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
       } else if (slot === 2 || slot === 4) {
         const qtyVariant = (slot + seed) % 3;
         if (qtyVariant === 0) {
-          const totalItems = 30 + (seed % 6) * 10;
+          // Make counts divide exactly (minimize rounding)
           const fracPart = getCleanFraction(seed + 3);
-          const partCount = Math.round(totalItems * (fracPart.percent / 100));
+          const k = 2 + (seed % 6);
+          const totalItems = fracPart.denominator * k;
+          const partCount = fracPart.numerator * k;
           questions.push({
             id,
             category: QuestionCategory.APPLIED_WORD_PROBLEM,
@@ -391,9 +461,10 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
             hint: `${totalItems} × (${fracPart.percent} ÷ 100) = ${partCount}개`
           });
         } else if (qtyVariant === 1) {
-          const total = 40 + (seed % 4) * 10;
           const pct = [20, 25, 30, 40][seed % 4];
-          const ans = Math.round(total * (pct / 100));
+          const denom = denomForPercent(pct);
+          const total = denom * (8 + (seed % 6)); // >= 8*denom
+          const ans = (total * pct) / 100;
           questions.push({
             id,
             category: QuestionCategory.APPLIED_WORD_PROBLEM,
@@ -420,9 +491,11 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
       } else {
         const goalBases = [80, 100, 120, 150, 200];
         const sellPercents = [110, 120, 125, 130, 150];
-        const goalBase = goalBases[(seed + stageId) % goalBases.length];
         const sellPercent = sellPercents[(seed + qIndex) % sellPercents.length];
-        const soldCount = Math.round(goalBase * (sellPercent / 100));
+        const denom = denomForPercent(sellPercent);
+        const candidates = goalBases.filter((g) => g % denom === 0);
+        const goalBase = (candidates.length ? candidates[(seed + stageId) % candidates.length] : denom * (10 + (seed % 8)));
+        const soldCount = (goalBase * sellPercent) / 100;
         questions.push({
           id,
           category: QuestionCategory.APPLIED_WORD_PROBLEM,
@@ -439,7 +512,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
       const basePrice = 2000 + ((seed % 10) * 1000); // 2000 ~ 11000
       const discountRates = [10, 15, 20, 25, 30, 40, 50];
       const discountRate = discountRates[seed % discountRates.length];
-      const savings = Math.round(basePrice * (discountRate / 100));
+      const savings = (basePrice * discountRate) / 100;
       const salePrice = basePrice - savings;
 
       if (slot === 1) {
@@ -491,9 +564,11 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
       } else if (slot === 5 || qIndex > 5) {
         const goalBases = [80, 100, 120, 150, 200];
         const sellPercents = [110, 120, 125, 130, 150];
-        const goalBase = goalBases[(seed + stageId) % goalBases.length];
         const sellPercent = sellPercents[(seed + qIndex) % sellPercents.length];
-        const soldCount = Math.round(goalBase * (sellPercent / 100));
+        const denom = denomForPercent(sellPercent);
+        const candidates = goalBases.filter((g) => g % denom === 0);
+        const goalBase = (candidates.length ? candidates[(seed + stageId) % candidates.length] : denom * (10 + (seed % 8)));
+        const soldCount = (goalBase * sellPercent) / 100;
         questions.push({
           id,
           category: QuestionCategory.APPLIED_WORD_PROBLEM,

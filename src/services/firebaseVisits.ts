@@ -1,11 +1,4 @@
-import {
-  doc,
-  getDoc,
-  serverTimestamp,
-  setDoc,
-  updateDoc,
-  increment
-} from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { getFirebaseDb, isFirebaseConfigured } from '../lib/firebase';
 import { sanitizeDisplayText, INPUT_LIMITS } from '../lib/safeStorage';
 import { rtdbGet, rtdbRecordSchoolUser, rtdbSet } from './firebaseRtdbMirror';
@@ -34,24 +27,6 @@ async function sha256Hex(text: string): Promise<string> {
     .join('');
 }
 
-async function incrementUniqueSchoolsMetaFirestore(
-  db: NonNullable<ReturnType<typeof getFirebaseDb>>
-): Promise<void> {
-  const schoolsMetaRef = doc(db, 'meta', 'schools');
-  const snap = await getDoc(schoolsMetaRef);
-  if (!snap.exists()) {
-    await setDoc(schoolsMetaRef, {
-      uniqueSchools: 1,
-      updatedAt: serverTimestamp(),
-    });
-  } else {
-    await updateDoc(schoolsMetaRef, {
-      uniqueSchools: increment(1),
-      updatedAt: serverTimestamp(),
-    });
-  }
-}
-
 async function incrementUniqueSchoolsMetaRtdb(): Promise<void> {
   const existing = await rtdbGet('meta/schools');
   const current = Number(existing?.uniqueSchools ?? 0);
@@ -59,41 +34,6 @@ async function incrementUniqueSchoolsMetaRtdb(): Promise<void> {
     uniqueSchools: current + 1,
     updatedAt: new Date().toISOString(),
   });
-}
-
-async function recordSessionVisitFirestore(deviceId: string): Promise<boolean> {
-  const db = getFirebaseDb();
-  if (!db) return false;
-
-  const statsRef = doc(db, 'meta', 'stats');
-  const visitorRef = doc(db, 'visitors', deviceId);
-
-  const statsSnap = await getDoc(statsRef);
-  if (!statsSnap.exists()) {
-    await setDoc(statsRef, {
-      totalSessions: 1,
-      uniqueDevices: 0,
-      updatedAt: serverTimestamp(),
-    });
-  } else {
-    await updateDoc(statsRef, {
-      totalSessions: increment(1),
-      updatedAt: serverTimestamp(),
-    });
-  }
-
-  const visitorSnap = await getDoc(visitorRef);
-  if (!visitorSnap.exists()) {
-    await setDoc(visitorRef, {
-      deviceId,
-      firstSeen: serverTimestamp(),
-    });
-    await updateDoc(statsRef, {
-      uniqueDevices: increment(1),
-      updatedAt: serverTimestamp(),
-    });
-  }
-  return true;
 }
 
 async function recordSessionVisitRtdb(deviceId: string): Promise<boolean> {
@@ -118,31 +58,18 @@ async function recordSessionVisitRtdb(deviceId: string): Promise<boolean> {
   return true;
 }
 
+/** 세션·학교 방문 집계는 RTDB만 사용 (Firestore read-before-write 비용 절감) */
 export async function recordSessionVisit(): Promise<void> {
   if (!isFirebaseConfigured()) return;
   if (sessionStorage.getItem(SESSION_LOGGED_KEY)) return;
 
   const deviceId = getOrCreateDeviceId();
-  let ok = false;
 
   try {
-    ok = await recordSessionVisitFirestore(deviceId);
-  } catch {
-    // Firestore blocked at school — mirror to RTDB
-  }
-
-  if (!ok) {
-    try {
-      ok = await recordSessionVisitRtdb(deviceId);
-    } catch {
-      // ignore
-    }
-  } else {
-    void recordSessionVisitRtdb(deviceId).catch(() => undefined);
-  }
-
-  if (ok) {
+    await recordSessionVisitRtdb(deviceId);
     sessionStorage.setItem(SESSION_LOGGED_KEY, '1');
+  } catch {
+    // ignore
   }
 }
 
@@ -177,51 +104,6 @@ export async function recordSchoolUser(
   } catch {
     // ignore
   }
-}
-
-async function recordSchoolVisitFirestore(
-  school: string,
-  schoolId: string,
-  deviceId: string
-): Promise<boolean> {
-  const db = getFirebaseDb();
-  if (!db) return false;
-
-  const statsRef = doc(db, 'schoolStats', schoolId);
-  const visitorRef = doc(db, 'schoolVisitors', schoolId, 'devices', deviceId);
-
-  const statsSnap = await getDoc(statsRef);
-  if (!statsSnap.exists()) {
-    await setDoc(statsRef, {
-      schoolName: school,
-      totalSessions: 1,
-      uniqueDevices: 0,
-      updatedAt: serverTimestamp(),
-    });
-    try {
-      await incrementUniqueSchoolsMetaFirestore(db);
-    } catch {
-      // optional
-    }
-  } else {
-    await updateDoc(statsRef, {
-      totalSessions: increment(1),
-      updatedAt: serverTimestamp(),
-    });
-  }
-
-  const visitorSnap = await getDoc(visitorRef);
-  if (!visitorSnap.exists()) {
-    await setDoc(visitorRef, {
-      deviceId,
-      firstSeen: serverTimestamp(),
-    });
-    await updateDoc(statsRef, {
-      uniqueDevices: increment(1),
-      updatedAt: serverTimestamp(),
-    });
-  }
-  return true;
 }
 
 async function recordSchoolVisitRtdb(
@@ -276,24 +158,10 @@ export async function recordSchoolVisit(
   const sessionKey = `${SCHOOL_SESSION_PREFIX}${schoolId}`;
   if (!options?.force && sessionStorage.getItem(sessionKey)) return;
 
-  let ok = false;
   try {
-    ok = await recordSchoolVisitFirestore(school, schoolId, deviceId);
-  } catch {
-    // Firestore blocked
-  }
-
-  if (!ok) {
-    try {
-      ok = await recordSchoolVisitRtdb(school, schoolId, deviceId);
-    } catch {
-      // ignore
-    }
-  } else {
-    void recordSchoolVisitRtdb(school, schoolId, deviceId).catch(() => undefined);
-  }
-
-  if (ok) {
+    await recordSchoolVisitRtdb(school, schoolId, deviceId);
     sessionStorage.setItem(sessionKey, '1');
+  } catch {
+    // ignore
   }
 }

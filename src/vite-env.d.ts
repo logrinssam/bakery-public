@@ -9,6 +9,7 @@ interface ImportMetaEnv {
   readonly VITE_FIREBASE_APP_ID?: string;
   /** Realtime Database URL (학교망 이어하기·집계 백업). 비우면 {projectId}-default-rtdb.firebaseio.com 사용 */
   readonly VITE_FIREBASE_DATABASE_URL?: string;
+  readonly VITE_PUBLIC_APP_URL?: string;
 }
 
 interface ImportMeta {

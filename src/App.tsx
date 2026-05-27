@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { PlayerStats, ShopType, MathQuestion, Stage, Equipment, QuestionCategory } from './types';
-import { STAGES, generateQuestionsForStage, getQuestionsPerStage } from './data/stages';
-import { UPGRADE_ITEMS, getActiveGoldMultiplierBoost } from './data/equipment';
+import { STAGES, generateQuestionsForStage, getQuestionsPerStage, TOTAL_STAGE_COUNT } from './data/stages';
+import { UPGRADE_ITEMS, getActiveGoldMultiplierBoost, getEquipmentLevel, getEquipmentNextPrice, getOwnedEquipmentIds, MAX_EQUIPMENT_LEVEL } from './data/equipment';
 import { PixelSprite, BREADS_METADATA } from './components/PixelSprite';
 import { MathQuestionBox } from './components/MathQuestionBox';
 import { CabinetScreen } from './components/CabinetScreen';
@@ -124,7 +124,6 @@ export default function App() {
 
   const [pinSaveId, setPinSaveId] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'saving' | 'error'>('idle');
-  const saveTimerRef = useRef<number | null>(null);
   const hydratedRef = useRef(false);
 
   // Load saved state on mount
@@ -191,7 +190,6 @@ export default function App() {
     void recordSchoolVisit(stats.hallSchool);
   }, [stats.hallSchool]);
 
-  // Sync state to local storage whenever stats variable updates
   const saveStats = (newStats: PlayerStats) => {
     setStats(newStats);
     try {
@@ -199,23 +197,21 @@ export default function App() {
     } catch {
       // safe fallback
     }
+  };
 
-    if (pinSaveId) {
-      if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = window.setTimeout(async () => {
-        try {
-          setSyncStatus('saving');
-          await ensureAnonSignedIn();
-          await savePinStats(pinSaveId, newStats);
-          if (newStats.hallSchool && newStats.hallName) {
-            void recordSchoolUser(newStats.hallSchool, newStats.hallName, pinSaveId);
-            void recordSchoolVisit(newStats.hallSchool);
-          }
-          setSyncStatus('idle');
-        } catch {
-          setSyncStatus('error');
-        }
-      }, 800);
+  /** 클라우드 이어하기 — 스테이지 클리어·프로필 저장 시에만 (비용·쓰기 횟수 절약) */
+  const syncProgressToCloud = async (progress: PlayerStats) => {
+    if (!pinSaveId || !isFirebaseConfigured()) return;
+    try {
+      setSyncStatus('saving');
+      await ensureAnonSignedIn();
+      await savePinStats(pinSaveId, progress);
+      if (progress.hallSchool && progress.hallName) {
+        void recordSchoolUser(progress.hallSchool, progress.hallName, pinSaveId);
+      }
+      setSyncStatus('idle');
+    } catch {
+      setSyncStatus('idle');
     }
   };
 
@@ -363,8 +359,10 @@ export default function App() {
   };
 
   const selectMascot = (stageId: number, qIndex: number, purchasedIds: number[]) => {
-    const hasVipEquip = purchasedIds.includes(12) || purchasedIds.includes(13);
-    if (hasVipEquip && Math.random() < 0.35) {
+    // Economy balance: VIP should be a rare "jackpot", not constant inflation.
+    // Require some investment (Lv3+) in VIP-trigger equipment to unlock VIP visits.
+    const hasVipEquip = getEquipmentLevel(purchasedIds, 12) >= 3 || getEquipmentLevel(purchasedIds, 13) >= 3;
+    if (hasVipEquip && Math.random() < 0.2) {
       const randIdx = Math.floor(Math.random() * VIP_MASCOTS.length);
       return VIP_MASCOTS[randIdx];
     }
@@ -377,11 +375,6 @@ export default function App() {
 
     const stage = STAGES.find(s => s.id === stageId);
     if (!stage) return;
-
-    if (stage.requiredStars > stats.starsEarned) {
-      alert(`이 스테이지에 들어가려면 최소 ${stage.requiredStars}개의 별(Stars)이 필요합니다. 이전 스테이지를 다시 풀어 별을 모아 보세요!`);
-      return;
-    }
 
     const stageQuestions = generateQuestionsForStage(stageId);
     setCurrentQuestions(stageQuestions);
@@ -426,9 +419,9 @@ export default function App() {
       
       const sumEquipmentBoost = getActiveGoldMultiplierBoost(stats.purchasedEquipmentIds);
 
-      // VIP custom double chance 3x bonus multiplier
+      // VIP jackpot (kept exciting but less inflationary)
       const isVipCustomer = activeMascot && activeMascot.isVip;
-      const vipMultiplier = isVipCustomer ? 3.0 : 1.0;
+      const vipMultiplier = isVipCustomer ? 2.5 : 1.0;
 
       const finalGold = Math.round(baseGold * (1 + sumEquipmentBoost) * vipMultiplier);
       const nextStreak = stats.streakCount + 1;
@@ -450,7 +443,6 @@ export default function App() {
       const updatedStats: PlayerStats = {
         ...stats,
         gold: stats.gold + finalGold,
-        starsEarned: stats.starsEarned + 1,
         streakCount: nextStreak,
         highestStreak: nextHighestStreak,
         correctAnswersCount: stats.correctAnswersCount + 1,
@@ -532,11 +524,14 @@ export default function App() {
 
       const completionBonus = clearedStageId * 100;
       playPixelSFX('clear');
-      saveStats({
+      const clearedStats: PlayerStats = {
         ...stats,
         gold: stats.gold + completionBonus,
-        stageProgress: nextProgress
-      });
+        stageProgress: nextProgress,
+        starsEarned: Math.min(TOTAL_STAGE_COUNT, Math.max(stats.starsEarned, clearedStageId)),
+      };
+      saveStats(clearedStats);
+      void syncProgressToCloud(clearedStats);
 
       alert(`🎉 축하합니다! ${clearedStageId}단계를 최고 실력으로 완료하고 단골 주문을 대성공했습니다!\n\n베이커리 매장 확장 축하 보너스: +${completionBonus} G 지급 완료!`);
       openPlayPage('map');
@@ -545,7 +540,13 @@ export default function App() {
   };
 
   const handleBuyEquipment = (item: Equipment) => {
-    if (stats.gold < item.price) {
+    const nextPrice = getEquipmentNextPrice(item, stats.purchasedEquipmentIds);
+    const currentLevel = getEquipmentLevel(stats.purchasedEquipmentIds, item.id);
+    if (nextPrice === null || currentLevel >= MAX_EQUIPMENT_LEVEL) {
+      alert('이미 최대 레벨입니다!');
+      return;
+    }
+    if (stats.gold < nextPrice) {
       alert('골드가 부족합니다! 수학 주문 문제를 풀어 베이커리 기금을 더 마련하세요.');
       return;
     }
@@ -554,11 +555,11 @@ export default function App() {
 
     const updated: PlayerStats = {
       ...stats,
-      gold: stats.gold - item.price,
+      gold: stats.gold - nextPrice,
       purchasedEquipmentIds: [...stats.purchasedEquipmentIds, item.id]
     };
     saveStats(updated);
-    alert(`🛒 "${item.name}" 구매 완료! 주방에서 바로 사용할 수 있어요.`);
+    alert(`🛒 "${item.name}" ${currentLevel > 0 ? `강화 완료! (Lv ${currentLevel + 1})` : '구매 완료!'} 주방에서 바로 사용할 수 있어요.`);
   };
 
   const handleToggleSfx = () => {
@@ -650,7 +651,7 @@ export default function App() {
             {pinSaveId && (
               <span
                 className="shrink-0 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg border border-white/15 bg-[#4E342E] text-white font-sans text-[9px] sm:text-[10px] font-bold tracking-tight opacity-90"
-                title="이어하기: 학교/닉네임/비밀번호로 동기화"
+                title="스테이지 클리어·프로필 저장 시 클라우드에 이어하기"
               >
                 이어하기{syncStatus === 'saving' ? ' · 저장중…' : syncStatus === 'loading' ? ' · 불러오는 중…' : ''}
               </span>
@@ -693,8 +694,8 @@ export default function App() {
 
             {/* Global level progress tracker */}
             <div className="hidden sm:flex bg-[#4E342E] border-2 border-white rounded-full px-3 py-1 items-center gap-1 shrink-0">
-              <span className="font-sans text-[9px] text-white font-bold opacity-90">🏆 STARS:</span>
-              <span className="font-display text-[11px] font-black text-white">{stats.starsEarned} 개</span>
+              <span className="font-sans text-[9px] text-white font-bold opacity-90">🏆 클리어:</span>
+              <span className="font-display text-[11px] font-black text-white">{stats.starsEarned}/{TOTAL_STAGE_COUNT}</span>
             </div>
 
             {page !== 'intro' && (
@@ -894,7 +895,7 @@ export default function App() {
 
               {stats.stageProgress > 1 && (
                 <div className="flex items-center justify-center md:justify-start gap-4 mt-3 pt-3 border-t border-dashed border-stone-200 text-[11px] font-sans text-stone-500">
-                  <span>현재 세이브 복원: <b>{stats.stageProgress}스테이지 진행 중</b> (⭐{stats.starsEarned} 스타)</span>
+                  <span>현재 세이브 복원: <b>{stats.stageProgress}스테이지 진행 중</b> (⭐{stats.starsEarned}단계 클리어)</span>
                   <button type="button" onClick={handleResetGame} className="text-red-600 underline font-semibold flex items-center gap-0.5 hover:text-red-700">
                     <RotateCcw className="w-3 h-3" /> 초기화
                   </button>
@@ -958,11 +959,11 @@ export default function App() {
                     <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-[#5D4037]" />
                   </div>
                   <div className="overflow-hidden">
-                    <h4 className="font-sans text-[10px] text-stone-500 font-bold uppercase tracking-wider">Collected Stars</h4>
-                    <p className="font-display text-sm sm:text-lg md:text-xl font-black text-[#5D4037] truncate">{stats.starsEarned} / 250 ⭐</p>
+                    <h4 className="font-sans text-[10px] text-stone-500 font-bold uppercase tracking-wider">클리어 스테이지</h4>
+                    <p className="font-display text-sm sm:text-lg md:text-xl font-black text-[#5D4037] truncate">{stats.starsEarned} / {TOTAL_STAGE_COUNT} ⭐</p>
                   </div>
                 </div>
-                <span className="text-[9px] sm:text-[10px] font-sans font-extrabold text-[#5D4037] bg-[#FFF4E0] border-2 border-[#5D4037] px-2.5 py-1 rounded-full select-none shrink-0">목표: 180</span>
+                <span className="text-[9px] sm:text-[10px] font-sans font-extrabold text-[#5D4037] bg-[#FFF4E0] border-2 border-[#5D4037] px-2.5 py-1 rounded-full select-none shrink-0">목표: {TOTAL_STAGE_COUNT}</span>
               </div>
 
               <div className="bg-white border-4 border-[#5D4037] rounded-2xl p-4 sm:p-5 flex items-center justify-between shadow-md">
@@ -985,7 +986,7 @@ export default function App() {
                   </div>
                   <div className="overflow-hidden">
                     <h4 className="font-sans text-[10px] text-stone-500 font-bold uppercase tracking-wider">도구 상점</h4>
-                    <p className="font-display text-sm sm:text-lg md:text-xl font-black text-[#5D4037] truncate">{stats.purchasedEquipmentIds.length}종 도구 보유</p>
+                    <p className="font-display text-sm sm:text-lg md:text-xl font-black text-[#5D4037] truncate">{getOwnedEquipmentIds(stats.purchasedEquipmentIds).length}종 도구 보유</p>
                   </div>
                 </div>
                 <button
@@ -1037,17 +1038,14 @@ export default function App() {
                     {STAGES.filter(s => s.id >= group.bounds[0] && s.id <= group.bounds[1]).map((st) => {
                       const isUnlocked = st.id <= stats.stageProgress;
                       const isCompleted = st.id < stats.stageProgress;
-                      const needStars = st.requiredStars;
-                      const starsLocked = stats.starsEarned < needStars;
-
                       return (
                         <button
                           key={st.id}
                           type="button"
-                          disabled={!isUnlocked || starsLocked}
+                          disabled={!isUnlocked}
                           onClick={() => handleSelectStage(st.id)}
                           className={`min-h-[72px] sm:min-h-[82px] p-2 sm:p-3 rounded-xl border-2 flex flex-col justify-between text-left transition-all tracking-tight ${
-                            isUnlocked && !starsLocked
+                            isUnlocked
                               ? isCompleted
                                 ? 'bg-[#FFF4E0] border-[#5D4037] hover:bg-amber-100 text-[#5D4037] cursor-pointer shadow-sm hover:scale-[1.04] hover:-translate-y-0.5'
                                 : 'bg-[#FF85A1] border-[#5D4037] text-white cursor-pointer shadow-md hover:scale-[1.04] hover:-translate-y-0.5 ring-2 ring-[#FF85A1]/25 font-extrabold'
@@ -1072,7 +1070,7 @@ export default function App() {
                           </span>
 
                           <span className="font-mono text-[8.5px] sm:text-[9px] font-bold block leading-tight mt-1 opacity-95">
-                            {starsLocked ? `⭐${needStars}필요` : st.representativeMenu}
+                            {st.representativeMenu}
                           </span>
                         </button>
                       );
@@ -1180,21 +1178,21 @@ export default function App() {
                   {/* Active Installed Equipment Shelf inside kitchen screen */}
                   <div className="bg-white/90 border border-amber-200 rounded-xl p-2.5 flex flex-col gap-1 relative z-10 shadow-xs sm:col-span-1" id="kitchen-active-equipment-display">
                     <span className="font-display text-[9px] font-black text-[#5D4037] flex items-center gap-1 border-b pb-1 uppercase select-none">
-                      🛠️ 보유 도구 ({stats.purchasedEquipmentIds.length}개)
+                      🛠️ 보유 도구 ({getOwnedEquipmentIds(stats.purchasedEquipmentIds).length}개)
                     </span>
-                    {stats.purchasedEquipmentIds.length === 0 ? (
+                    {getOwnedEquipmentIds(stats.purchasedEquipmentIds).length === 0 ? (
                       <span className="text-[9px] text-stone-400 font-bold text-center py-1 block">아직 주방 장비가 없습니다.</span>
                     ) : (
                       <div className="flex flex-wrap gap-1.5 max-h-[48px] overflow-y-auto">
-                        {UPGRADE_ITEMS.filter(e => stats.purchasedEquipmentIds.includes(e.id)).map(e => (
+                        {UPGRADE_ITEMS.filter(e => getEquipmentLevel(stats.purchasedEquipmentIds, e.id) > 0).map(e => (
                           <div 
                             key={e.id} 
                             className="w-8 h-8 bg-[#FFF4E0] border border-[#5D4037]/25 rounded-lg flex items-center justify-center relative group cursor-help hover:scale-105 transition-all shadow-xs"
-                            title={`${e.name}: ${e.effectText}`}
+                            title={`${e.name} (Lv ${getEquipmentLevel(stats.purchasedEquipmentIds, e.id)}): ${e.effectText}`}
                           >
                             <PixelSprite type="equipment" index={e.spriteIndex} size={22} />
                             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block bg-[#5D4037] text-white text-[9px] font-sans rounded px-2 py-1 whitespace-nowrap z-50">
-                              {e.name}
+                              {e.name} (Lv {getEquipmentLevel(stats.purchasedEquipmentIds, e.id)})
                             </div>
                           </div>
                         ))}

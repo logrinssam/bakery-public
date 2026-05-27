@@ -37,16 +37,16 @@ export async function savePinStats(saveId: string, stats: PlayerStats): Promise<
     updatedAt: serverTimestamp(),
   };
 
-  const writes: Promise<void>[] = [];
-
   const db = getFirebaseDb();
   if (db) {
-    writes.push(
-      setDoc(doc(db, 'pinSaves', saveId), payload, { merge: true }).catch(() => undefined)
-    );
+    try {
+      await setDoc(doc(db, 'pinSaves', saveId), payload, { merge: true });
+      void rtdbSavePinSave(saveId, stats).catch(() => undefined);
+      return;
+    } catch {
+      // Firestore blocked at school — RTDB only
+    }
   }
 
-  writes.push(rtdbSavePinSave(saveId, stats).catch(() => undefined));
-
-  await Promise.all(writes);
+  await rtdbSavePinSave(saveId, stats);
 }

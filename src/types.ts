@@ -65,7 +65,7 @@ export interface PlayerStats {
   gold: number;
   streakCount: number;
   highestStreak: number;
-  starsEarned: number; // Total correct answers
+  starsEarned: number; // Cleared stage count (max 50)
   correctAnswersCount: number;
   totalAnswersCount: number;
   purchasedEquipmentIds: number[];

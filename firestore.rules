@@ -113,7 +113,7 @@ function isValidHallRecord(data) {
     && data.date.size() <= 12
     && data.stars is int
     && data.stars >= 0
-    && data.stars <= 600
+    && data.stars <= 50
     && data.highestStreak is int
     && data.highestStreak >= 0
     && data.highestStreak <= 100

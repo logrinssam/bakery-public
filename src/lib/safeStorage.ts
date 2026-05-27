@@ -20,11 +20,22 @@ export function sanitizeDisplayText(value: string, maxLen: number): string {
     .slice(0, maxLen);
 }
 
-/** 서버 제출용 상한 (50단계·10문항 기준 여유치) */
+/** 서버 제출용 상한 */
 export const HALL_SUBMIT_LIMITS = {
-  maxStars: 600,
+  maxStars: 50,
   maxStreak: 100,
 } as const;
+
+export const MAX_STAGE_STARS = 50;
+
+/** 스테이지 클리어 수(별). 예전 세이브(정답마다 +1)는 진행도 기준으로 보정 */
+export function normalizeStarsEarned(starsEarned: number, stageProgress: number): number {
+  const clearedByProgress = Math.max(0, Math.min(MAX_STAGE_STARS, stageProgress - 1));
+  if (starsEarned > MAX_STAGE_STARS || starsEarned > stageProgress + 5) {
+    return clearedByProgress;
+  }
+  return Math.min(MAX_STAGE_STARS, Math.max(0, Math.max(starsEarned, clearedByProgress)));
+}
 
 export function clampHallSubmitStats(stars: number, highestStreak: number) {
   return {
@@ -65,12 +76,15 @@ function asStringArray(value: unknown, maxItems = 200, maxItemLen = 40): string[
 export function parsePlayerStats(raw: unknown, fallback: PlayerStats): PlayerStats {
   if (!isRecord(raw)) return fallback;
 
+  const stageProgress = asNumber(raw.stageProgress, fallback.stageProgress, 1, MAX_STAGE_STARS);
+  const starsRaw = asNumber(raw.starsEarned, fallback.starsEarned, 0, 999_999);
+
   return {
-    stageProgress: asNumber(raw.stageProgress, fallback.stageProgress, 1, 50),
+    stageProgress,
     gold: asNumber(raw.gold, fallback.gold, 0, 9_999_999),
     streakCount: asNumber(raw.streakCount, fallback.streakCount, 0, 9999),
     highestStreak: asNumber(raw.highestStreak, fallback.highestStreak, 0, 9999),
-    starsEarned: asNumber(raw.starsEarned, fallback.starsEarned, 0, 999_999),
+    starsEarned: normalizeStarsEarned(starsRaw, stageProgress),
     correctAnswersCount: asNumber(raw.correctAnswersCount, fallback.correctAnswersCount, 0, 999_999),
     totalAnswersCount: asNumber(raw.totalAnswersCount, fallback.totalAnswersCount, 0, 999_999),
     purchasedEquipmentIds: asNumberArray(raw.purchasedEquipmentIds),

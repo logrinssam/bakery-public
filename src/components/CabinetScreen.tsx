@@ -1,6 +1,6 @@
 import React from 'react';
 import { Equipment } from '../types';
-import { UPGRADE_ITEMS } from '../data/equipment';
+import { getCategoryBoostCap, getEquipmentBoostAtLevel, getEquipmentLevel, getEquipmentNextPrice, MAX_EQUIPMENT_LEVEL, MAX_TOTAL_EQUIPMENT_BOOST, UPGRADE_ITEMS } from '../data/equipment';
 import { PixelSprite } from './PixelSprite';
 import { ShoppingBag, ArrowLeft, Check, TrendingUp } from 'lucide-react';
 
@@ -17,6 +17,8 @@ export const CabinetScreen: React.FC<CabinetScreenProps> = ({
   onPurchase,
   onBack
 }) => {
+  const formatPct = (boost: number) => `+${Math.round(boost * 100)}%`;
+
   return (
     <div className="w-full flex flex-col gap-8 text-[#5D4037]" id="baker-upgrade-cabinet-panel">
       
@@ -34,7 +36,9 @@ export const CabinetScreen: React.FC<CabinetScreenProps> = ({
           </button>
           <div>
             <h1 className="font-display font-black text-[#5D4037] text-2xl md:text-3xl tracking-tight">🛠️ 도구 상점</h1>
-            <p className="font-sans text-xs text-stone-500 font-medium mt-1">같은 종류 장비는 최고급 1개만 골드 보너스에 적용됩니다. 특수 효과(힌트·콤보 보호)는 보유한 장비마다 따로 작동해요!</p>
+            <p className="font-sans text-xs text-stone-500 font-medium mt-1">
+              같은 종류(카테고리)는 <b>가장 높은 1개</b>만 골드 보너스에 적용됩니다. 장비는 <b>강화(Lv)</b>할수록 가격이 크게 오르며, 카테고리/전체 보너스는 상한이 있어요. (전체 상한: +{Math.round(MAX_TOTAL_EQUIPMENT_BOOST * 100)}%)
+            </p>
           </div>
         </div>
 
@@ -51,8 +55,13 @@ export const CabinetScreen: React.FC<CabinetScreenProps> = ({
       {/* Equipment Upgrade Bento Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4" id="upgrades-shelf-cabinet">
         {UPGRADE_ITEMS.map((item) => {
-          const isOwned = unlockedIds.includes(item.id);
-          const canAfford = gold >= item.price;
+          const level = getEquipmentLevel(unlockedIds, item.id);
+          const isOwned = level > 0;
+          const nextPrice = getEquipmentNextPrice(item, unlockedIds);
+          const canAfford = nextPrice !== null && gold >= nextPrice;
+          const currentBoost = isOwned ? getEquipmentBoostAtLevel(item, level) : 0;
+          const nextBoost =
+            nextPrice === null ? null : getEquipmentBoostAtLevel(item, Math.min(MAX_EQUIPMENT_LEVEL, level + 1));
           
           return (
             <div 
@@ -71,6 +80,11 @@ export const CabinetScreen: React.FC<CabinetScreenProps> = ({
                   {isOwned && (
                     <div className="absolute -top-2 -right-2 bg-[#66BB6A] border-2 border-[#5D4037] text-white p-0.5 rounded-full shadow-sm">
                       <Check className="w-3 h-3" />
+                    </div>
+                  )}
+                  {isOwned && (
+                    <div className="absolute -bottom-2 -right-2 bg-[#5D4037] text-white border-2 border-[#FFF4E0] px-1.5 py-0.5 rounded-md text-[9px] font-mono font-black shadow-sm">
+                      Lv {level}
                     </div>
                   )}
                 </div>
@@ -108,16 +122,32 @@ export const CabinetScreen: React.FC<CabinetScreenProps> = ({
                   <TrendingUp className="w-4 h-4 text-[#66BB6A] shrink-0" />
                   <div className="font-sans text-[10px] text-[#5D4037] font-extrabold leading-tight">
                     {item.effectText}
+                    {isOwned && (
+                      <div className="mt-1 text-[9px] font-mono font-black text-emerald-800">
+                        현재: {formatPct(currentBoost)}
+                        {nextBoost !== null ? ` → 다음: ${formatPct(nextBoost)}` : ''}
+                        <span className="ml-1 text-stone-500 font-extrabold">
+                          (카테고리 상한: {formatPct(getCategoryBoostCap(item.category))})
+                        </span>
+                      </div>
+                    )}
+                    {!isOwned && (
+                      <div className="mt-1 text-[9px] font-mono font-black text-emerald-800">
+                        적용: {formatPct(getEquipmentBoostAtLevel(item, 1))}
+                        <span className="ml-1 text-stone-500 font-extrabold">
+                          (카테고리 상한: {formatPct(getCategoryBoostCap(item.category))})
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
 
               {/* Product Action Button */}
               <div className="border-t-2 border-dashed border-[#5D4037]/10 pt-3.5 flex items-center justify-between mt-1">
-                {isOwned ? (
-                  <div className="w-full flex items-center justify-center gap-1 py-2.5 bg-[#66BB6A]/10 text-[#2E7D32] border-2 border-[#66BB6A] rounded-xl font-sans text-[11px] font-black shadow-xs">
-                    <Check className="w-3.5 h-3.5" />
-                    보너스 버프 활성 적용 중
+                {isOwned && nextPrice === null ? (
+                  <div className="w-full flex items-center justify-center gap-1 py-2.5 bg-stone-50 text-stone-500 border-2 border-stone-200 rounded-xl font-sans text-[11px] font-black shadow-xs">
+                    최대 레벨 (Lv {MAX_EQUIPMENT_LEVEL})
                   </div>
                 ) : (
                   <button
@@ -131,8 +161,8 @@ export const CabinetScreen: React.FC<CabinetScreenProps> = ({
                     }`}
                   >
                     <ShoppingBag className="w-3.5 h-3.5" />
-                    <span>구매: </span>
-                    <span className="font-mono font-black text-[11px]">{(item.price).toLocaleString()} G</span>
+                    <span>{isOwned ? '강화' : '구매'}: </span>
+                    <span className="font-mono font-black text-[11px]">{(nextPrice ?? item.price).toLocaleString()} G</span>
                   </button>
                 )}
               </div>

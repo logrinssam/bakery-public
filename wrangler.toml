@@ -1,6 +1,12 @@
 # Dashboard project name must match (build: 2026-05-24)
 name = "bakery"
 compatibility_date = "2024-09-23"
+workers_dev = true
+
+# 로그인교실 서브도메인 (한글: pixel-bakery.로그인교실.com)
+[[routes]]
+pattern = "pixel-bakery.xn--9d0blmm1xg2knrf.com"
+custom_domain = true
 
 # Required when Deploy command = npx wrangler deploy
 [assets]

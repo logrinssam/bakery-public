@@ -232,21 +232,72 @@ export const UPGRADE_ITEMS: Equipment[] = [
   }
 ];
 
-/** Gold bonus: highest multiplierBoost per category among owned items (special effects use separate checks). */
+/**
+ * Equipment leveling
+ * - Backwards-compatible: `purchasedIds` can include duplicates.
+ *   Duplicates are interpreted as "levels" for that equipment.
+ */
+// Economy tuning: gold inflow is high, so upgrades must scale hard.
+export const MAX_EQUIPMENT_LEVEL = 15;
+export const EQUIPMENT_PRICE_GROWTH = 1.85;
+export const MAX_TOTAL_EQUIPMENT_BOOST = 2.5; // +250% max from equipment (lower inflation cap)
+
+const MAX_CATEGORY_BOOST: Record<Equipment['category'], number> = {
+  oven: 2.2,
+  rolling_pin: 1.3,
+  measuring_cup: 1.3,
+  scale: 1.3,
+  other: 1.3,
+  calculation: 1.3,
+};
+
+export function getCategoryBoostCap(category: Equipment['category']): number {
+  return MAX_CATEGORY_BOOST[category];
+}
+
+export function getEquipmentLevel(purchasedIds: number[], itemId: number): number {
+  let level = 0;
+  for (const id of purchasedIds) if (id === itemId) level += 1;
+  return Math.min(MAX_EQUIPMENT_LEVEL, level);
+}
+
+export function getOwnedEquipmentIds(purchasedIds: number[]): number[] {
+  const set = new Set<number>();
+  for (const id of purchasedIds) set.add(id);
+  return Array.from(set.values());
+}
+
+export function getEquipmentPriceForLevel(item: Equipment, level: number): number {
+  const lvl = Math.max(1, Math.min(MAX_EQUIPMENT_LEVEL, level));
+  return Math.round(item.price * Math.pow(EQUIPMENT_PRICE_GROWTH, lvl - 1));
+}
+
+export function getEquipmentNextPrice(item: Equipment, purchasedIds: number[]): number | null {
+  const current = getEquipmentLevel(purchasedIds, item.id);
+  if (current >= MAX_EQUIPMENT_LEVEL) return null;
+  return getEquipmentPriceForLevel(item, current + 1);
+}
+
+export function getEquipmentBoostAtLevel(item: Equipment, level: number): number {
+  // Diminishing linear scale; hard caps keep balance stable.
+  const lvl = Math.max(1, Math.min(MAX_EQUIPMENT_LEVEL, level));
+  const scaled = item.multiplierBoost * (1 + 0.15 * (lvl - 1));
+  return Math.min(scaled, MAX_CATEGORY_BOOST[item.category]);
+}
+
+/** Gold bonus: best boost per category among owned items (levels supported). */
 export function getActiveGoldMultiplierBoost(purchasedIds: number[]): number {
   const bestByCategory = new Map<Equipment['category'], number>();
 
   for (const item of UPGRADE_ITEMS) {
-    if (!purchasedIds.includes(item.id)) continue;
+    const lvl = getEquipmentLevel(purchasedIds, item.id);
+    if (lvl <= 0) continue;
+    const boosted = getEquipmentBoostAtLevel(item, lvl);
     const current = bestByCategory.get(item.category) ?? 0;
-    if (item.multiplierBoost > current) {
-      bestByCategory.set(item.category, item.multiplierBoost);
-    }
+    if (boosted > current) bestByCategory.set(item.category, boosted);
   }
 
   let sum = 0;
-  for (const boost of bestByCategory.values()) {
-    sum += boost;
-  }
-  return sum;
+  for (const boost of bestByCategory.values()) sum += boost;
+  return Math.min(sum, MAX_TOTAL_EQUIPMENT_BOOST);
 }

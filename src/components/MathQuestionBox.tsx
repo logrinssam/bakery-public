@@ -33,7 +33,7 @@ export const MathQuestionBox: React.FC<MathQuestionBoxProps> = ({
     setShowHint(false);
     setQtyA(0);
     setQtyB(0);
-  }, [question]);
+  }, [question.id]);
 
   const handleKeypadClick = (val: string) => {
     if (val === 'C') {
@@ -62,12 +62,18 @@ export const MathQuestionBox: React.FC<MathQuestionBoxProps> = ({
   // Render Interactive Ingredients Bowl
   const renderIngredientRatioBuilder = () => {
     const details = question.recipeDetails || { itemA: '밀가루', itemB: '우유', valA: 1, valB: 1 };
-    
+    const maxQtyA = Math.min(12, details.valA + 2);
+    const maxQtyB = Math.min(12, details.valB + 2);
+    const targetRatio = `${details.valA}:${details.valB}`;
+
     return (
       <div className="w-full flex flex-col items-center gap-6 bg-[#FFF4E0]/40 border-4 border-dashed border-[#5D4037]/20 rounded-3xl p-5 md:p-6" id="ratio-ingredient-bowl-panel">
         <div className="text-center font-sans font-bold text-[#5D4037] text-sm md:text-base mb-2">
           🍳 <span className="font-extrabold text-[#D64566] underline">{details.itemA}</span> 와 <span className="font-extrabold text-blue-700 underline">{details.itemB}</span>를 볼에 알맞은 수량으로 믹싱해 황금 비율을 맞춰 보세요!
         </div>
+        <p className="text-center font-mono text-sm font-black text-[#D64566] bg-white border-2 border-[#5D4037] rounded-xl px-4 py-1.5">
+          목표 비: {targetRatio}
+        </p>
 
         <div className="w-full grid grid-cols-2 gap-4 max-w-md">
           {/* Ingredient A Controller */}
@@ -84,7 +90,7 @@ export const MathQuestionBox: React.FC<MathQuestionBoxProps> = ({
               <span className="w-8 text-center font-mono text-xl font-black text-[#5D4037]">{qtyA}</span>
               <button
                 type="button"
-                onClick={() => setQtyA(p => Math.min(15, p + 1))}
+                onClick={() => setQtyA(p => Math.min(maxQtyA, p + 1))}
                 className="w-10 h-10 flex items-center justify-center font-mono font-black bg-[#FF85A1] hover:bg-[#FF85A1]/80 border-2 border-[#5D4037] text-white rounded-xl text-lg cursor-pointer"
               >
                 +
@@ -111,7 +117,7 @@ export const MathQuestionBox: React.FC<MathQuestionBoxProps> = ({
               <span className="w-8 text-center font-mono text-xl font-black text-[#5D4037]">{qtyB}</span>
               <button
                 type="button"
-                onClick={() => setQtyB(p => Math.min(15, p + 1))}
+                onClick={() => setQtyB(p => Math.min(maxQtyB, p + 1))}
                 className="w-10 h-10 flex items-center justify-center font-mono font-black bg-blue-500 hover:bg-blue-600 border-2 border-[#5D4037] text-white rounded-xl text-lg cursor-pointer"
               >
                 +
