@@ -1,4 +1,5 @@
 import { Stage, ShopType, MathQuestion, QuestionCategory } from '../types';
+import { shuffleOptions } from '../utils/shuffleOptions';
 
 export const TOTAL_STAGE_COUNT = 50;
 
@@ -294,12 +295,11 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
         });
       } else if (slot === 4) {
         // Option select question
-        const options = ['3/4', '1/4', '4/3', '1/3'];
         questions.push({
           id,
           category: QuestionCategory.RATIO_VALUE_FRACTION,
           questionText: `딸기 크림 컵케이크 4개와 초코 크림 컵케이크 3개가 있습니다. 초코 컵케이크 수에 대한 딸기 컵케이크 수의 비율을 고르세요.`,
-          options,
+          options: shuffleOptions(['3/4', '1/4', '4/3', '1/3'], id),
           correctAnswer: `4/3`,
           acceptableAnswers: [`4/3`, `4 / 3`],
           hint: '"초코에 대한"이면 초코가 기준량(분모), 딸기가 비교하는 양(분자)입니다. 분자/분모 형태로 고르세요.'
@@ -361,7 +361,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
           id,
           category: QuestionCategory.RATIO_VALUE_DECIMAL,
           questionText: `초코 케이크 시트를 굽기 위해 밀가루 25컵과 초콜릿 가루 3컵을 섞었습니다. 밀가루 양에 대한 초콜릿 가루 양의 비율을 소수 값으로 선택하세요.`,
-          options: optionList,
+          options: shuffleOptions(optionList, id),
           correctAnswer: `0.12`,
           acceptableAnswers: [`0.12`, `.12`],
           hint: '"밀가루에 대한"이면 밀가루가 분모, 초콜릿 가루가 분자입니다. 분수를 소수로 환산하세요.'
@@ -436,7 +436,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
             id,
             category: QuestionCategory.PERCENTAGE_CONVERSION,
             questionText: `밀가루 20스푼과 버터 9스푼을 섞었습니다. 버터가 차지하는 비중은 몇 % 인지 고르세요.`,
-            options: opts,
+            options: shuffleOptions(opts, id),
             correctAnswer: `45%`,
             acceptableAnswers: [`45%`, `45`],
             unit: '%',
@@ -481,7 +481,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
             id,
             category: QuestionCategory.APPLIED_WORD_PROBLEM,
             questionText: `${menuLabel} 선물 박스 ${totalBox}개 중, 초코 필링 비율이 30% 입니다. 초코 필링 ${menuLabel}은 몇 개인지 고르세요.`,
-            options: optionSelect,
+            options: shuffleOptions(optionSelect, id),
             correctAnswer: `9개`,
             acceptableAnswers: [`9개`, `9`],
             unit: '개',
@@ -555,7 +555,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
           id,
           category: QuestionCategory.DISCOUNT_CALCULATION,
           questionText: `오전 한정 세일 기간으로 정가 7500원인 프레시 바게트 샌드위치를 30% 저렴한 가격에 판매하고 있습니다. 실제 판매 가격을 선택하세요.`,
-          options: optionMarket,
+          options: shuffleOptions(optionMarket, id),
           correctAnswer: `5250원`,
           acceptableAnswers: [`5250원`, `5250`],
           unit: '원',
@@ -637,7 +637,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
           id,
           category: QuestionCategory.APPLIED_WORD_PROBLEM,
           questionText: `황금 밀가루 자루에서 크루아상을 굽고 남은 사용 불가능한 부스러기가 무려 60개입니다. 이것이 오늘 사용한 전체 밀가루 분량의 30% 비중이라면, 오늘 처음 사용하기 시작한 황금 밀가루 자루의 전체 무게(개수)는 몇 단위였을까요?`,
-          options: optionRoyalList,
+          options: shuffleOptions(optionRoyalList, id),
           correctAnswer: `200개`,
           acceptableAnswers: [`200개`, `200`],
           unit: '개',
@@ -704,7 +704,7 @@ export function generateQuestionsForStage(stageId: number): MathQuestion[] {
           id,
           category: QuestionCategory.APPLIED_WORD_PROBLEM,
           questionText: `전설의 초코칩 멜론 빵 세트에 멜론이 무려 150알 포함되어 있습니다. 이것이 멜론 빵 세트 과일 장식 전체의 30% 비중이라면, 과일 장식 전체 총량은 몇 개입니까?`,
-          options: optionMasterList,
+          options: shuffleOptions(optionMasterList, id),
           correctAnswer: `500개`,
           acceptableAnswers: [`500개`, `500`],
           unit: '개',
