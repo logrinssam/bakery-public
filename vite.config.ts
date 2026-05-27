@@ -20,8 +20,11 @@ function publicAppUrlPlugin(): Plugin {
 
 export default defineConfig(({mode}) => {
   const production = mode === 'production';
+  const githubPages = process.env.GITHUB_PAGES === 'true';
 
   return {
+    // GitHub Pages는 /<repo>/ 서브패스로 서빙됨
+    base: githubPages ? '/bakery-public/' : '/',
     plugins: [publicAppUrlPlugin(), react(), tailwindcss()],
     resolve: {
       alias: {
