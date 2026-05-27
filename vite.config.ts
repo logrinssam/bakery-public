@@ -15,8 +15,15 @@ function resolveBuildId(): string {
   return String(Date.now());
 }
 
-/** dist/version.json + 번들에 동일 ID 주입 (배포 후 새로고침 배너용) */
-function appVersionPlugin(buildId: string): Plugin {
+function makeVersionCheckScript(buildId: string, base: string): string {
+  const root = base.endsWith('/') ? base : `${base}/`;
+  return `(function(){var B=${JSON.stringify(buildId)};var R=${JSON.stringify(root)};function ck(){fetch(R+"version.json?t="+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.json():null}).then(function(d){if(d&&d.id&&d.id!==B)location.reload()}).catch(function(){})}ck();setInterval(ck,3e4);document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible")ck()})})();`;
+}
+
+/** dist/version.json + version-check.js + 번들에 동일 ID 주입 */
+function appVersionPlugin(buildId: string, base: string): Plugin {
+  const versionCheckJs = makeVersionCheckScript(buildId, base);
+
   return {
     name: 'app-version',
     config() {
@@ -26,6 +33,14 @@ function appVersionPlugin(buildId: string): Plugin {
         },
       };
     },
+    transformIndexHtml(html) {
+      const tag = `<script src="${base}version-check.js"></script>`;
+      if (html.includes('version-check.js')) return html;
+      return html.replace(
+        '<script type="module"',
+        `${tag}\n    <script type="module"`
+      );
+    },
     generateBundle() {
       this.emitFile({
         type: 'asset',
@@ -34,6 +49,23 @@ function appVersionPlugin(buildId: string): Plugin {
           id: buildId,
           builtAt: new Date().toISOString(),
         }),
+      });
+      this.emitFile({
+        type: 'asset',
+        fileName: 'version-check.js',
+        source: versionCheckJs,
+      });
+    },
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const path = req.url?.split('?')[0] ?? '';
+        if (path.endsWith('/version-check.js') || path === '/version-check.js') {
+          res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+          res.setHeader('Cache-Control', 'no-store');
+          res.end(versionCheckJs);
+          return;
+        }
+        next();
       });
     },
   };
@@ -57,11 +89,12 @@ export default defineConfig(({mode}) => {
   const production = mode === 'production';
   const githubPages = process.env.GITHUB_PAGES === 'true';
   const buildId = resolveBuildId();
+  const appBase = githubPages ? '/bakery-public/' : '/';
 
   return {
     // GitHub Pages는 /<repo>/ 서브패스로 서빙됨
-    base: githubPages ? '/bakery-public/' : '/',
-    plugins: [appVersionPlugin(buildId), publicAppUrlPlugin(), react(), tailwindcss()],
+    base: appBase,
+    plugins: [appVersionPlugin(buildId, appBase), publicAppUrlPlugin(), react(), tailwindcss()],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
