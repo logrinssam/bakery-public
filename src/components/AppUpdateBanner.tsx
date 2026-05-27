@@ -11,6 +11,13 @@ const VERSION_URL = `${import.meta.env.BASE_URL}version.json`;
  */
 export function AppUpdateBanner() {
   const [updateReady, setUpdateReady] = useState(false);
+  const [reloading, setReloading] = useState(false);
+
+  const applyUpdate = () => {
+    if (reloading) return;
+    setReloading(true);
+    window.location.reload();
+  };
 
   const checkForUpdate = useCallback(async () => {
     if (import.meta.env.DEV) return;
@@ -55,15 +62,16 @@ export function AppUpdateBanner() {
       <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-center sm:text-left">
         <p className="font-sans text-xs sm:text-sm font-bold break-keep leading-snug">
           🔄 게임이 업데이트되었어요.{' '}
-          <span className="text-[#F4D03F]">새로고침</span>해야 버그 수정·새 기능이 적용됩니다.
+          <span className="text-[#F4D03F]">확인</span>을 누르면 자동으로 새로고침됩니다.
         </p>
         <button
           type="button"
-          onClick={() => window.location.reload()}
-          className="shrink-0 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#FF85A1] border-2 border-[#F4D03F] text-white font-sans font-black text-xs sm:text-sm hover:bg-[#FF9FB6] cursor-pointer"
+          onClick={applyUpdate}
+          disabled={reloading}
+          className="shrink-0 inline-flex items-center gap-1.5 px-5 py-2 rounded-xl bg-[#FF85A1] border-2 border-[#F4D03F] text-white font-sans font-black text-xs sm:text-sm hover:bg-[#FF9FB6] cursor-pointer disabled:opacity-70 disabled:cursor-wait"
         >
-          <RefreshCw className="w-4 h-4" />
-          새로고침
+          <RefreshCw className={`w-4 h-4 ${reloading ? 'animate-spin' : ''}`} />
+          {reloading ? '적용 중…' : '확인'}
         </button>
       </div>
     </div>
