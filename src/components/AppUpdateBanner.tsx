@@ -1,6 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
-import { acknowledgeBuildId, shouldShowUpdatePrompt } from '../lib/updateAck';
+import {
+  acknowledgeBuildId,
+  clearUpdateAck,
+  incrementReloadAttempts,
+  shouldShowUpdatePrompt,
+} from '../lib/updateAck';
 
 declare const __APP_BUILD_ID__: string;
 
@@ -18,10 +23,25 @@ export function AppUpdateBanner() {
   const applyUpdate = () => {
     if (reloading) return;
     const remoteId = pendingRemoteIdRef.current;
-    if (remoteId) acknowledgeBuildId(remoteId);
+    if (!remoteId) return;
+
+    const attempts = incrementReloadAttempts();
+    if (attempts >= 3) {
+      acknowledgeBuildId(remoteId);
+      setUpdateReady(false);
+      window.alert(
+        '브라우저가 예전 파일을 붙들고 있어요.\n\n' +
+          '키보드로 Ctrl+Shift+R (맥은 Cmd+Shift+R)을 눌러 강력 새로고침해 주세요.\n' +
+          '그래도 안 되면 탭을 닫았다가 주소를 다시 열어 주세요.'
+      );
+      return;
+    }
+
     setReloading(true);
     setUpdateReady(false);
-    window.location.reload();
+    const url = new URL(window.location.href);
+    url.searchParams.set('_v', remoteId);
+    window.location.replace(url.toString());
   };
 
   const checkForUpdate = useCallback(async () => {
@@ -31,6 +51,13 @@ export function AppUpdateBanner() {
       if (!res.ok) return;
       const data = (await res.json()) as { id?: string };
       if (!data.id) return;
+
+      if (data.id === __APP_BUILD_ID__) {
+        clearUpdateAck();
+        pendingRemoteIdRef.current = null;
+        setUpdateReady(false);
+        return;
+      }
 
       if (shouldShowUpdatePrompt(data.id, __APP_BUILD_ID__)) {
         pendingRemoteIdRef.current = data.id;

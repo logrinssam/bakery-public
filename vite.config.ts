@@ -15,20 +15,14 @@ function resolveBuildId(): string {
   return String(Date.now());
 }
 
-function makeVersionCheckScript(buildId: string, base: string): string {
-  const root = base.endsWith('/') ? base : `${base}/`;
-  const updateMsg =
-    '픽셀 베이커리 업데이트!\n\n' +
-    '확인을 누르면 새로고침해 주세요.\n' +
-    '공부한 진행은 사라지지 않아요.\n' +
-    '(엔터 버그로 단계만 튄 경우 맞춰 드려요)';
-  const ackKey = 'pixel_bakery_update_ack_v1';
-  return `(function(){var B=${JSON.stringify(buildId)};var R=${JSON.stringify(root)};var MSG=${JSON.stringify(updateMsg)};var AK=${JSON.stringify(ackKey)};function ck(){fetch(R+"version.json?t="+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.json():null}).then(function(d){if(!d||!d.id||d.id===B)return;try{if(sessionStorage.getItem(AK)===d.id)return}catch(e){}try{sessionStorage.setItem(AK,d.id)}catch(e){}try{alert(MSG)}catch(e){}location.reload()}).catch(function(){})}ck();setInterval(ck,3e4);document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible")ck()})})();`;
+/** 예전 탭용 — alert/강제 새로고침 없음 (React 배너만 사용, 학교망 캐시 루프 방지) */
+function makeVersionCheckScript(): string {
+  return '/* version-check disabled: use in-app update banner */';
 }
 
 /** dist/version.json + version-check.js + 번들에 동일 ID 주입 */
 function appVersionPlugin(buildId: string, base: string): Plugin {
-  const versionCheckJs = makeVersionCheckScript(buildId, base);
+  const versionCheckJs = makeVersionCheckScript();
 
   return {
     name: 'app-version',
