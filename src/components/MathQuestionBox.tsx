@@ -8,6 +8,8 @@ interface MathQuestionBoxProps {
   onSubmitAnswer: (answer: string) => void;
   isWrongNotification: boolean;
   isCorrectNotification: boolean;
+  /** 정답·오답·굽기 중 — 엔터 연타로 중복 제출 방지 */
+  inputDisabled?: boolean;
   breadIndex?: number;
   breadName?: string;
 }
@@ -17,6 +19,7 @@ export const MathQuestionBox: React.FC<MathQuestionBoxProps> = ({
   onSubmitAnswer,
   isWrongNotification,
   isCorrectNotification,
+  inputDisabled = false,
   breadIndex,
   breadName
 }) => {
@@ -46,16 +49,18 @@ export const MathQuestionBox: React.FC<MathQuestionBoxProps> = ({
   };
 
   const handleBuilderSubmit = () => {
+    if (inputDisabled) return;
     onSubmitAnswer(`${qtyA}:${qtyB}`);
   };
 
   const handleRegularSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!userInput.trim()) return;
+    if (inputDisabled || !userInput.trim()) return;
     onSubmitAnswer(userInput.trim());
   };
 
   const selectMultipleOption = (option: string) => {
+    if (inputDisabled) return;
     onSubmitAnswer(option);
   };
 
@@ -161,7 +166,7 @@ export const MathQuestionBox: React.FC<MathQuestionBoxProps> = ({
         {/* Submit Baking Action */}
         <button
           type="button"
-          disabled={qtyA === 0 && qtyB === 0}
+          disabled={inputDisabled || (qtyA === 0 && qtyB === 0)}
           onClick={handleBuilderSubmit}
           className={`px-8 py-4.5 rounded-2xl font-display font-black text-sm shadow-md transition-all flex items-center gap-2 mt-2 cursor-pointer ${
             qtyA === 0 && qtyB === 0
@@ -243,8 +248,9 @@ export const MathQuestionBox: React.FC<MathQuestionBoxProps> = ({
               <button
                 key={i}
                 type="button"
+                disabled={inputDisabled}
                 onClick={() => selectMultipleOption(opt)}
-                className="w-full text-left p-4 rounded-xl border-4 border-[#5D4037] bg-white hover:bg-[#FFF4E0]/40 text-[#5D4037] font-sans font-bold text-sm transition-all focus:outline-none flex items-center justify-between group shadow-sm hover:scale-[1.01] cursor-pointer"
+                className="w-full text-left p-4 rounded-xl border-4 border-[#5D4037] bg-white hover:bg-[#FFF4E0]/40 text-[#5D4037] font-sans font-bold text-sm transition-all focus:outline-none flex items-center justify-between group shadow-sm hover:scale-[1.01] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               >
                 <span>{opt}</span>
                 <span className="w-7 h-7 rounded-lg border-2 border-[#5D4037] bg-[#FFF4E0] text-[#5D4037] group-hover:bg-[#FF85A1] group-hover:text-white flex items-center justify-center font-mono text-xs font-black transition-all">
@@ -266,8 +272,9 @@ export const MathQuestionBox: React.FC<MathQuestionBoxProps> = ({
                     id="student-answer-input"
                     value={userInput}
                     onChange={(e) => setUserInput(e.target.value)}
+                    disabled={inputDisabled}
                     placeholder="예: 3:5 또는 2/5 또는 0.4 등 형식에 맞춰 입력"
-                    className="w-full bg-[#FFF4E0]/20 border-4 border-[#5D4037] rounded-2xl px-4 py-3.5 font-mono text-lg font-black text-[#5D4037] focus:outline-none focus:ring-4 focus:ring-orange-100 transition-all shadow-inner"
+                    className="w-full bg-[#FFF4E0]/20 border-4 border-[#5D4037] rounded-2xl px-4 py-3.5 font-mono text-lg font-black text-[#5D4037] focus:outline-none focus:ring-4 focus:ring-orange-100 transition-all shadow-inner disabled:opacity-50"
                     autoComplete="off"
                   />
                   {question.unit && (
@@ -281,7 +288,8 @@ export const MathQuestionBox: React.FC<MathQuestionBoxProps> = ({
               <div className="flex flex-col gap-2 mt-2">
                 <button
                   type="submit"
-                  className="w-full btn-pixel-pink text-white py-4.5 rounded-2xl font-display font-black text-sm transition-all cursor-pointer hover:scale-[1.01]"
+                  disabled={inputDisabled}
+                  className="w-full btn-pixel-pink text-white py-4.5 rounded-2xl font-display font-black text-sm transition-all cursor-pointer hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 >
                   반죽 농도 확인하고 제출하기
                 </button>

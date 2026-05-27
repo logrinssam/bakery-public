@@ -126,6 +126,9 @@ export default function App() {
   const [pinSaveId, setPinSaveId] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'saving' | 'error'>('idle');
   const hydratedRef = useRef(false);
+  /** 정답·오답·굽기 애니 중복 처리 방지 (엔터 연타 등) */
+  const gameplayLockRef = useRef(false);
+  const bakingCompleteHandledRef = useRef(false);
 
   // Load saved state on mount
   const sfxPrimedRef = useRef(false);
@@ -392,6 +395,12 @@ export default function App() {
     const stage = STAGES.find(s => s.id === stageId);
     if (!stage) return;
 
+    gameplayLockRef.current = false;
+    bakingCompleteHandledRef.current = false;
+    setIsCorrect(false);
+    setIsWrong(false);
+    setIsBakingActive(false);
+
     const stageQuestions = generateQuestionsForStage(stageId);
     setCurrentQuestions(stageQuestions);
     setCurrentQIndex(0);
@@ -416,6 +425,8 @@ export default function App() {
   };
 
   const handleSubmitAnswer = (userAns: string) => {
+    if (gameplayLockRef.current || isBakingActive || isCorrect || isWrong) return;
+
     const question = currentQuestions[currentQIndex];
     if (!question) return;
 
@@ -427,6 +438,7 @@ export default function App() {
                       normalize(question.correctAnswer) === cleanUser;
 
     if (isMatched) {
+      gameplayLockRef.current = true;
       playPixelSFX('correct');
 
       // Compute correct reward calculations
@@ -474,11 +486,13 @@ export default function App() {
 
       setTimeout(() => {
         setIsCorrect(false);
+        bakingCompleteHandledRef.current = false;
         setIsBakingActive(true); // Fire cooking animation progression
         saveStats(updatedStats);
       }, 1200);
 
     } else {
+      gameplayLockRef.current = true;
       playPixelSFX('wrong');
 
       // Incorrect state trigger
@@ -501,6 +515,7 @@ export default function App() {
       setTimeout(() => {
         setIsWrong(false);
         setIsShieldTriggered(false);
+        gameplayLockRef.current = false;
       }, 1500);
     }
   };
@@ -511,8 +526,15 @@ export default function App() {
   };
 
   const handleBakingComplete = () => {
+    if (bakingCompleteHandledRef.current) return;
+    bakingCompleteHandledRef.current = true;
     setIsBakingActive(false);
-    
+
+    const releaseGameplay = () => {
+      gameplayLockRef.current = false;
+      bakingCompleteHandledRef.current = false;
+    };
+
     // Jump to next question or complete stage
     const questionsInStage = getQuestionsPerStage(activeStageId!);
     if (currentQIndex < questionsInStage - 1) {
@@ -532,6 +554,7 @@ export default function App() {
         ...stats,
         encounteredMascotNames: updatedMascots
       });
+      releaseGameplay();
     } else {
       // All stage questions solved — unlock progress
       const clearedStageId = activeStageId!;
@@ -550,6 +573,7 @@ export default function App() {
       void syncProgressToCloud(clearedStats);
 
       alert(`🎉 축하합니다! ${clearedStageId}단계를 최고 실력으로 완료하고 단골 주문을 대성공했습니다!\n\n베이커리 매장 확장 축하 보너스: +${completionBonus} G 지급 완료!`);
+      releaseGameplay();
       openPlayPage('map');
       setActiveStageId(null);
     }
@@ -1297,6 +1321,7 @@ export default function App() {
                       onSubmitAnswer={handleSubmitAnswer}
                       isWrongNotification={isWrong}
                       isCorrectNotification={isCorrect}
+                      inputDisabled={isCorrect || isWrong || isBakingActive}
                       breadIndex={activeBreadIndex}
                       breadName={activeBreadName}
                     />

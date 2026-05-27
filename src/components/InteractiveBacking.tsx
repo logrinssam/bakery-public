@@ -19,6 +19,11 @@ export const InteractiveBacking: React.FC<InteractiveBackingProps> = ({
 }) => {
   const [progress, setProgress] = useState(0);
   const [phase, setPhase] = useState<'heating' | 'unveiling'>('heating');
+  const [finishLocked, setFinishLocked] = useState(false);
+
+  useEffect(() => {
+    setFinishLocked(false);
+  }, [breadIndex, breadName]);
 
   useEffect(() => {
     // Progressive heater progress bar
@@ -37,6 +42,8 @@ export const InteractiveBacking: React.FC<InteractiveBackingProps> = ({
   }, []);
 
   const handleFinish = () => {
+    if (finishLocked) return;
+    setFinishLocked(true);
     onAnimationComplete();
   };
 
@@ -124,7 +131,8 @@ export const InteractiveBacking: React.FC<InteractiveBackingProps> = ({
             <button
               type="button"
               onClick={handleFinish}
-              className="mt-4 btn-pixel-pink px-8 py-4 rounded-2xl cursor-pointer w-full text-white flex items-center justify-center gap-2"
+              disabled={finishLocked}
+              className="mt-4 btn-pixel-pink px-8 py-4 rounded-2xl cursor-pointer w-full text-white flex items-center justify-center gap-2 disabled:opacity-60"
             >
               <ShoppingBag className="w-4 h-4 text-white" />
               <span>진열대 진열 및 지도 가기</span>
