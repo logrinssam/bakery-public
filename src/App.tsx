@@ -139,6 +139,8 @@ export default function App() {
   const gameplayLockRef = useRef(false);
   const bakingCompleteHandledRef = useRef(false);
   const purchaseLockRef = useRef(false);
+  /** 스테이지 미완료 시 맵 이탈하면 골드·콤보 등을 되돌리기 위한 진입 시점 스냅샷 */
+  const stageRunSnapshotRef = useRef<PlayerStats | null>(null);
 
   // Load saved state on mount
   const sfxPrimedRef = useRef(false);
@@ -233,6 +235,50 @@ export default function App() {
     }
   };
 
+  const cloneStats = (s: PlayerStats): PlayerStats => JSON.parse(JSON.stringify(s)) as PlayerStats;
+
+  /** 주방 진행 중 — 화면만 갱신, 저장소에는 쓰지 않음 */
+  const setStatsDuringStage = (newStats: PlayerStats) => {
+    setStats(newStats);
+  };
+
+  const abandonStageRun = () => {
+    const snap = stageRunSnapshotRef.current;
+    if (snap) {
+      saveStats(snap);
+    }
+    stageRunSnapshotRef.current = null;
+    setActiveStageId(null);
+    gameplayLockRef.current = false;
+    bakingCompleteHandledRef.current = false;
+    setIsBakingActive(false);
+    setIsCorrect(false);
+    setIsWrong(false);
+  };
+
+  const confirmAbandonActiveStage = (): boolean => {
+    if (activeStageId === null) return true;
+    return window.confirm(
+      '스테이지를 중단할까요?\n\n이번 스테이지에서 번 골드·콤보는 저장되지 않습니다.'
+    );
+  };
+
+  const exitKitchenToMap = () => {
+    if (!confirmAbandonActiveStage()) return;
+    if (activeStageId !== null) abandonStageRun();
+    openPlayPage('map');
+  };
+
+  const leaveKitchenForPage = (target: 'collection' | 'fame' | 'upgrades' | 'map') => {
+    if (page === 'kitchen' && activeStageId !== null) {
+      if (!confirmAbandonActiveStage()) return;
+      abandonStageRun();
+    }
+    if (target === 'map') openPlayPage('map');
+    else if (target === 'upgrades') openPlayPage('upgrades');
+    else setPage(target);
+  };
+
   /** 클라우드 이어하기 — 스테이지 클리어·프로필 저장 시에만 (비용·쓰기 횟수 절약) */
   const syncProgressToCloud = async (progress: PlayerStats) => {
     if (!pinSaveId || !isFirebaseConfigured()) return;
@@ -271,6 +317,10 @@ export default function App() {
 
   const openPlayPage = (target: 'map' | 'kitchen' | 'upgrades') => {
     if (!requireProfileForPlay()) return;
+    if (page === 'kitchen' && activeStageId !== null && target !== 'kitchen') {
+      leaveKitchenForPage(target);
+      return;
+    }
     setPage(target);
   };
 
@@ -433,6 +483,8 @@ export default function App() {
     setIsWrong(false);
     setIsBakingActive(false);
 
+    stageRunSnapshotRef.current = cloneStats(stats);
+
     const stageQuestions = generateQuestionsForStage(stageId);
     setCurrentQuestions(stageQuestions);
     setCurrentQIndex(0);
@@ -520,7 +572,7 @@ export default function App() {
         setIsCorrect(false);
         bakingCompleteHandledRef.current = false;
         setIsBakingActive(true); // Fire cooking animation progression
-        saveStats(updatedStats);
+        setStatsDuringStage(updatedStats);
       }, 1200);
 
     } else {
@@ -538,7 +590,7 @@ export default function App() {
         streakCount: isShieldActive ? stats.streakCount : 0,
         totalAnswersCount: stats.totalAnswersCount + 1
       };
-      saveStats(updatedStats);
+      setStatsDuringStage(updatedStats);
 
       if (isShieldActive) {
         setIsShieldTriggered(true);
@@ -581,20 +633,15 @@ export default function App() {
         const updatedMascots = currentMascots.includes(rawMascotName)
           ? currentMascots
           : [...currentMascots, rawMascotName];
-        const next = { ...prev, encounteredMascotNames: updatedMascots };
-        try {
-          localStorage.setItem(STORAGE_KEYS.gameSave, JSON.stringify(next));
-        } catch {
-          // ignore quota
-        }
-        return next;
+        return { ...prev, encounteredMascotNames: updatedMascots };
       });
       releaseGameplay();
     } else {
-      // All stage questions solved — unlock progress (functional update: 정답 골드 누락 방지)
+      // All stage questions solved — 이때만 골드·진행 저장
       const clearedStageId = activeStageId!;
       const completionBonus = clearedStageId * 100;
       playPixelSFX('clear');
+      stageRunSnapshotRef.current = null;
 
       setStats((prev) => {
         const currentProgress = prev.stageProgress;
@@ -617,8 +664,8 @@ export default function App() {
 
       alert(`🎉 축하합니다! ${clearedStageId}단계를 최고 실력으로 완료하고 단골 주문을 대성공했습니다!\n\n베이커리 매장 확장 축하 보너스: +${completionBonus} G 지급 완료!`);
       releaseGameplay();
-      openPlayPage('map');
       setActiveStageId(null);
+      openPlayPage('map');
     }
   };
 
@@ -814,7 +861,7 @@ export default function App() {
               <div className="flex items-center gap-1 sm:gap-1.5">
                 <button
                   type="button"
-                  onClick={() => openPlayPage('map')}
+                  onClick={() => leaveKitchenForPage('map')}
                   className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl border-2 cursor-pointer transition-all font-sans text-[10px] sm:text-xs font-black tracking-tight flex items-center gap-0.5 sm:gap-1 shadow-[1.5px_1.5px_0px_rgba(0,0,0,0.3)] active:translate-y-[1.5px] active:shadow-none ${
                     page === 'map' 
                       ? 'bg-[#FF85A1] border-[#5D4037] text-white' 
@@ -826,7 +873,7 @@ export default function App() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setPage('collection')}
+                  onClick={() => leaveKitchenForPage('collection')}
                   className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl border-2 cursor-pointer transition-all font-sans text-[10px] sm:text-xs font-black tracking-tight flex items-center gap-0.5 sm:gap-1 shadow-[1.5px_1.5px_0px_rgba(0,0,0,0.3)] active:translate-y-[1.5px] active:shadow-none ${
                     page === 'collection' 
                       ? 'bg-[#F4D03F] border-[#5D4037] text-[#5D4037]' 
@@ -838,7 +885,7 @@ export default function App() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setPage('fame')}
+                  onClick={() => leaveKitchenForPage('fame')}
                   className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl border-2 cursor-pointer transition-all font-sans text-[10px] sm:text-xs font-black tracking-tight flex items-center gap-0.5 sm:gap-1 shadow-[1.5px_1.5px_0px_rgba(0,0,0,0.3)] active:translate-y-[1.5px] active:shadow-none ${
                     page === 'fame' 
                       ? 'bg-[#66BB6A] border-[#5D4037] text-white' 
@@ -1345,12 +1392,7 @@ export default function App() {
                   {/* Resilient back button */}
                   <button
                     type="button"
-                    onClick={() => {
-                      if (window.confirm('정말 스테이지 해결을 멈추고 맵으로 돌아가겠습니까? 진행 사항을 잃게 됩니다.')) {
-                        openPlayPage('map');
-                        setActiveStageId(null);
-                      }
-                    }}
+                    onClick={exitKitchenToMap}
                     className="w-full py-2 bg-stone-900/10 hover:bg-stone-900/20 text-[#3E2723] border border-stone-300 font-sans font-bold text-xs rounded-xl cursor-pointer transition-all uppercase tracking-wide relative z-10 sm:col-span-2"
                   >
                     중단하고 지도(Map)로 돌아가기
