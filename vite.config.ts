@@ -17,7 +17,12 @@ function resolveBuildId(): string {
 
 function makeVersionCheckScript(buildId: string, base: string): string {
   const root = base.endsWith('/') ? base : `${base}/`;
-  return `(function(){var B=${JSON.stringify(buildId)};var R=${JSON.stringify(root)};function ck(){fetch(R+"version.json?t="+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.json():null}).then(function(d){if(d&&d.id&&d.id!==B){try{alert("\uD53C\uC158 \uBCA0\uC774\uCEE4\uB9AC\uAC00 \uC5C5\uB370\uC774\uD2B8\uB418\uC5C8\uC5B4\uC694.\n\uD655\uC778\uC744 \uB204\uB974\uBA74 \uC0C8\uB85C\uACE0\uCE68\uD569\uB2C8\uB2E4.")}catch(e){}location.reload()}}).catch(function(){})}ck();setInterval(ck,3e4);document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible")ck()})})();`;
+  const updateMsg =
+    '픽셀 베이커리 업데이트!\n\n' +
+    '확인을 누르면 새로고침해 주세요.\n' +
+    '공부한 진행은 사라지지 않아요.\n' +
+    '(엔터 버그로 단계만 튄 경우 맞춰 드려요)';
+  return `(function(){var B=${JSON.stringify(buildId)};var R=${JSON.stringify(root)};var MSG=${JSON.stringify(updateMsg)};function ck(){fetch(R+"version.json?t="+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.json():null}).then(function(d){if(d&&d.id&&d.id!==B){try{alert(MSG)}catch(e){}location.reload()}}).catch(function(){})}ck();setInterval(ck,3e4);document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible")ck()})})();`;
 }
 
 /** dist/version.json + version-check.js + 번들에 동일 ID 주입 */

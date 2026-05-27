@@ -73,6 +73,19 @@ function asStringArray(value: unknown, maxItems = 200, maxItemLen = 40): string[
     .slice(0, maxItems);
 }
 
+/** 저장 데이터가 보정되면서 stageProgress가 줄었는지 (안내 모달용) */
+export function getStageProgressAdjustment(
+  raw: unknown,
+  parsed: PlayerStats
+): { adjusted: boolean; previousStage?: number } {
+  if (!isRecord(raw) || typeof raw.stageProgress !== 'number') {
+    return { adjusted: false };
+  }
+  const previous = Math.floor(raw.stageProgress);
+  if (previous <= parsed.stageProgress) return { adjusted: false };
+  return { adjusted: true, previousStage: previous };
+}
+
 export function parsePlayerStats(raw: unknown, fallback: PlayerStats): PlayerStats {
   if (!isRecord(raw)) return fallback;
 

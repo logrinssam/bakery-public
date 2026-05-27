@@ -54,7 +54,7 @@ export function AppUpdateBanner() {
 
   return (
     <>
-    <div className="h-[52px] sm:h-[48px] shrink-0" aria-hidden />
+    <div className="h-[64px] sm:h-[56px] shrink-0" aria-hidden />
     <div
       role="alert"
       className="fixed top-0 left-0 right-0 z-[100] bg-[#5D4037] border-b-4 border-[#F4D03F] text-white shadow-lg"
@@ -62,7 +62,10 @@ export function AppUpdateBanner() {
       <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-center sm:text-left">
         <p className="font-sans text-xs sm:text-sm font-bold break-keep leading-snug">
           🔄 게임이 업데이트되었어요.{' '}
-          <span className="text-[#F4D03F]">확인</span>을 누르면 자동으로 새로고침됩니다.
+          <span className="text-[#F4D03F]">확인</span>을 누르면 새로고침됩니다.
+          <span className="block mt-0.5 text-[10px] sm:text-[11px] font-semibold text-[#FFF4E0]/95">
+            진행·골드·도감은 사라지지 않아요. (엔터 버그로 단계만 튄 경우 맞춰 드려요)
+          </span>
         </p>
         <button
           type="button"

@@ -7,10 +7,15 @@ import { MathQuestionBox } from './components/MathQuestionBox';
 import { CabinetScreen } from './components/CabinetScreen';
 import { HallOfFame } from './components/HallOfFame';
 import { AppUpdateBanner } from './components/AppUpdateBanner';
+import {
+  ProgressRecoveryNotice,
+  type ProgressRecoveryInfo,
+} from './components/ProgressRecoveryNotice';
 import { InteractiveBacking } from './components/InteractiveBacking';
 import { CollectionBook } from './components/CollectionBook';
 import {
   clearAllGameStorage,
+  getStageProgressAdjustment,
   parsePlayerStats,
   sanitizeDisplayText,
   STORAGE_KEYS,
@@ -126,7 +131,10 @@ export default function App() {
 
   const [pinSaveId, setPinSaveId] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'saving' | 'error'>('idle');
+  const [progressRecovery, setProgressRecovery] = useState<ProgressRecoveryInfo | null>(null);
   const hydratedRef = useRef(false);
+
+  const PROGRESS_RECOVERY_SEEN_KEY = 'pixel_bakery_progress_fix_notice_v1';
   /** 정답·오답·굽기 애니 중복 처리 방지 (엔터 연타 등) */
   const gameplayLockRef = useRef(false);
   const bakingCompleteHandledRef = useRef(false);
@@ -143,7 +151,26 @@ export default function App() {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.gameSave);
       if (saved) {
-        setStats(parsePlayerStats(JSON.parse(saved), INITIAL_STATS));
+        const raw = JSON.parse(saved) as unknown;
+        const parsed = parsePlayerStats(raw, INITIAL_STATS);
+        const adjustment = getStageProgressAdjustment(raw, parsed);
+        setStats(parsed);
+        try {
+          localStorage.setItem(STORAGE_KEYS.gameSave, JSON.stringify(parsed));
+        } catch {
+          // ignore quota
+        }
+        if (
+          adjustment.adjusted &&
+          adjustment.previousStage !== undefined &&
+          !sessionStorage.getItem(PROGRESS_RECOVERY_SEEN_KEY)
+        ) {
+          setProgressRecovery({
+            previousStage: adjustment.previousStage,
+            correctedStage: parsed.stageProgress,
+            starsEarned: parsed.starsEarned,
+          });
+        }
       }
     } catch {
       // safe fallback
@@ -703,6 +730,20 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#FDF6E3] flex flex-col items-center justify-between font-sans selection:bg-brand-pink/30 scrollbar-thin">
       <AppUpdateBanner />
+
+      {progressRecovery && (
+        <ProgressRecoveryNotice
+          info={progressRecovery}
+          onDismiss={() => {
+            try {
+              sessionStorage.setItem(PROGRESS_RECOVERY_SEEN_KEY, '1');
+            } catch {
+              // ignore
+            }
+            setProgressRecovery(null);
+          }}
+        />
+      )}
 
       {/* 1. Global Navigation Bar */}
       <header className="w-full bg-[#5D4037] text-white border-b-4 border-[#F4D03F] sticky top-0 z-30">
