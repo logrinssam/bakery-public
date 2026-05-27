@@ -24,7 +24,7 @@ import {
 } from './lib/pixelSfx';
 import { recordSchoolUser, recordSchoolVisit, recordSessionVisit } from './services/firebaseVisits';
 import { ensureAnonSignedIn } from './services/firebaseAnon';
-import { loadPinSave, savePinStats } from './services/firebasePinSave';
+import { clampStatsForCloudSave, loadPinSave, savePinStats } from './services/firebasePinSave';
 import { sha256Hex } from './lib/cryptoHash';
 import { isFirebaseConfigured } from './lib/firebase';
 import { 
@@ -197,9 +197,10 @@ export default function App() {
   }, [stats.hallSchool]);
 
   const saveStats = (newStats: PlayerStats) => {
-    setStats(newStats);
+    const safe = import.meta.env.PROD ? clampStatsForCloudSave(newStats) : newStats;
+    setStats(safe);
     try {
-      localStorage.setItem(STORAGE_KEYS.gameSave, JSON.stringify(newStats));
+      localStorage.setItem(STORAGE_KEYS.gameSave, JSON.stringify(safe));
     } catch {
       // safe fallback
     }

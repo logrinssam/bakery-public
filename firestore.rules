@@ -2,10 +2,18 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /pinSaves/{saveId} {
-      allow read, write: if request.auth != null
+      allow read: if request.auth != null
+        && saveId.size() >= 32
+        && saveId.size() <= 64;
+      allow create: if request.auth != null
         && saveId.size() >= 32
         && saveId.size() <= 64
         && isValidPlayerSave(request.resource.data);
+      allow update: if request.auth != null
+        && saveId.size() >= 32
+        && saveId.size() <= 64
+        && isValidPlayerSave(request.resource.data)
+        && isValidPlayerSaveProgress(request.resource.data, resource.data);
     }
 
     match /schoolStats/{schoolId} {
@@ -64,6 +72,17 @@ service cloud.firestore {
       allow delete: if false;
     }
   }
+}
+
+/** 한 번에 여러 단계 점프(버그·치트) 방지 — 저장당 최대 +1단계 */
+function isValidPlayerSaveProgress(next, prev) {
+  return next.stageProgress is int
+    && prev.stageProgress is int
+    && next.stageProgress >= prev.stageProgress
+    && next.stageProgress <= prev.stageProgress + 1
+    && next.starsEarned is int
+    && next.starsEarned >= 0
+    && next.starsEarned <= next.stageProgress;
 }
 
 function isValidPlayerSave(data) {

@@ -76,15 +76,19 @@ function asStringArray(value: unknown, maxItems = 200, maxItemLen = 40): string[
 export function parsePlayerStats(raw: unknown, fallback: PlayerStats): PlayerStats {
   if (!isRecord(raw)) return fallback;
 
-  const stageProgress = asNumber(raw.stageProgress, fallback.stageProgress, 1, MAX_STAGE_STARS);
+  let stageProgress = asNumber(raw.stageProgress, fallback.stageProgress, 1, MAX_STAGE_STARS);
   const starsRaw = asNumber(raw.starsEarned, fallback.starsEarned, 0, 999_999);
+  const starsEarned = normalizeStarsEarned(starsRaw, stageProgress);
+  // 버그로 stage만 튀는 세이브 보정 (별·클리어 수 대비 비정상 진행)
+  const maxStageFromStars = Math.min(MAX_STAGE_STARS, Math.max(1, starsEarned + 1));
+  stageProgress = Math.min(stageProgress, maxStageFromStars);
 
   return {
     stageProgress,
     gold: asNumber(raw.gold, fallback.gold, 0, 9_999_999),
     streakCount: asNumber(raw.streakCount, fallback.streakCount, 0, 9999),
     highestStreak: asNumber(raw.highestStreak, fallback.highestStreak, 0, 9999),
-    starsEarned: normalizeStarsEarned(starsRaw, stageProgress),
+    starsEarned,
     correctAnswersCount: asNumber(raw.correctAnswersCount, fallback.correctAnswersCount, 0, 999_999),
     totalAnswersCount: asNumber(raw.totalAnswersCount, fallback.totalAnswersCount, 0, 999_999),
     purchasedEquipmentIds: asNumberArray(raw.purchasedEquipmentIds),
