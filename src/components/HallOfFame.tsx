@@ -378,9 +378,11 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
 
     if (!userName.trim() || !schoolQuery.trim() || !userComment.trim()) return;
     if (registering) return;
+    setRegistering(true);
 
     if (!schoolsReady && !schoolManual) {
       setSchoolError('학교 목록을 불러오는 중입니다. 잠시 후 다시 시도해 주세요.');
+      setRegistering(false);
       return;
     }
 
@@ -388,6 +390,7 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
       setSchoolError(
         '학교 목록을 불러오지 못했습니다. "목록에 없어요"를 체크한 뒤 공식 학교명을 입력해 주세요.'
       );
+      setRegistering(false);
       return;
     }
 
@@ -398,14 +401,16 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
           ? '초등학교 공식 명칭을 입력해 주세요. (예: ○○초등학교, "초등" 포함)'
           : '목록에서 학교를 선택해 주세요. 없으면 "목록에 없어요"를 체크해 주세요.'
       );
+      setRegistering(false);
       return;
     }
 
     const trimmedName = sanitizeDisplayText(userName, INPUT_LIMITS.hallName);
     const trimmedComment = sanitizeDisplayText(userComment, INPUT_LIMITS.hallComment);
-    if (!trimmedName || !trimmedComment) return;
-
-    setRegistering(true);
+    if (!trimmedName || !trimmedComment) {
+      setRegistering(false);
+      return;
+    }
     const recordDate = new Date().toISOString().split('T')[0];
 
     onRegister(trimmedName, resolvedSchool, trimmedComment);

@@ -129,6 +129,7 @@ export default function App() {
   /** 정답·오답·굽기 애니 중복 처리 방지 (엔터 연타 등) */
   const gameplayLockRef = useRef(false);
   const bakingCompleteHandledRef = useRef(false);
+  const purchaseLockRef = useRef(false);
 
   // Load saved state on mount
   const sfxPrimedRef = useRef(false);
@@ -251,6 +252,8 @@ export default function App() {
   };
 
   const handleSaveProfile = async () => {
+    if (syncStatus === 'loading' || syncStatus === 'saving') return;
+
     const name = sanitizeDisplayText(profileName, INPUT_LIMITS.hallName);
     if (!name.trim()) {
       setProfileError('닉네임(이름)을 입력해 주세요.');
@@ -543,34 +546,45 @@ export default function App() {
       const nextMascot = selectMascot(activeStageId!, nextIndex, stats.purchasedEquipmentIds);
       setActiveMascot(nextMascot);
 
-      // Save mascot to encountered book list
       const rawMascotName = nextMascot.name.split(' (')[0];
-      const currentMascots = stats.encounteredMascotNames || [];
-      const updatedMascots = currentMascots.includes(rawMascotName)
-        ? currentMascots
-        : [...currentMascots, rawMascotName];
-
-      saveStats({
-        ...stats,
-        encounteredMascotNames: updatedMascots
+      setStats((prev) => {
+        const currentMascots = prev.encounteredMascotNames || [];
+        const updatedMascots = currentMascots.includes(rawMascotName)
+          ? currentMascots
+          : [...currentMascots, rawMascotName];
+        const next = { ...prev, encounteredMascotNames: updatedMascots };
+        try {
+          localStorage.setItem(STORAGE_KEYS.gameSave, JSON.stringify(next));
+        } catch {
+          // ignore quota
+        }
+        return next;
       });
       releaseGameplay();
     } else {
-      // All stage questions solved — unlock progress
+      // All stage questions solved — unlock progress (functional update: 정답 골드 누락 방지)
       const clearedStageId = activeStageId!;
-      const currentProgress = stats.stageProgress;
-      const nextProgress = clearedStageId === currentProgress ? Math.min(50, currentProgress + 1) : currentProgress;
-
       const completionBonus = clearedStageId * 100;
       playPixelSFX('clear');
-      const clearedStats: PlayerStats = {
-        ...stats,
-        gold: stats.gold + completionBonus,
-        stageProgress: nextProgress,
-        starsEarned: Math.min(TOTAL_STAGE_COUNT, Math.max(stats.starsEarned, clearedStageId)),
-      };
-      saveStats(clearedStats);
-      void syncProgressToCloud(clearedStats);
+
+      setStats((prev) => {
+        const currentProgress = prev.stageProgress;
+        const nextProgress =
+          clearedStageId === currentProgress ? Math.min(50, currentProgress + 1) : currentProgress;
+        const clearedStats: PlayerStats = {
+          ...prev,
+          gold: prev.gold + completionBonus,
+          stageProgress: nextProgress,
+          starsEarned: Math.min(TOTAL_STAGE_COUNT, Math.max(prev.starsEarned, clearedStageId)),
+        };
+        try {
+          localStorage.setItem(STORAGE_KEYS.gameSave, JSON.stringify(clearedStats));
+        } catch {
+          // ignore quota
+        }
+        void syncProgressToCloud(clearedStats);
+        return clearedStats;
+      });
 
       alert(`🎉 축하합니다! ${clearedStageId}단계를 최고 실력으로 완료하고 단골 주문을 대성공했습니다!\n\n베이커리 매장 확장 축하 보너스: +${completionBonus} G 지급 완료!`);
       releaseGameplay();
@@ -580,26 +594,40 @@ export default function App() {
   };
 
   const handleBuyEquipment = (item: Equipment) => {
-    const nextPrice = getEquipmentNextPrice(item, stats.purchasedEquipmentIds);
-    const currentLevel = getEquipmentLevel(stats.purchasedEquipmentIds, item.id);
-    if (nextPrice === null || currentLevel >= MAX_EQUIPMENT_LEVEL) {
-      alert('이미 최대 레벨입니다!');
-      return;
-    }
-    if (stats.gold < nextPrice) {
-      alert('골드가 부족합니다! 수학 주문 문제를 풀어 베이커리 기금을 더 마련하세요.');
-      return;
-    }
+    if (purchaseLockRef.current) return;
+    purchaseLockRef.current = true;
 
-    playPixelSFX('upgrade');
+    setStats((prev) => {
+      const nextPrice = getEquipmentNextPrice(item, prev.purchasedEquipmentIds);
+      const currentLevel = getEquipmentLevel(prev.purchasedEquipmentIds, item.id);
+      if (nextPrice === null || currentLevel >= MAX_EQUIPMENT_LEVEL) {
+        purchaseLockRef.current = false;
+        window.alert('이미 최대 레벨입니다!');
+        return prev;
+      }
+      if (prev.gold < nextPrice) {
+        purchaseLockRef.current = false;
+        window.alert('골드가 부족합니다! 수학 주문 문제를 풀어 베이커리 기금을 더 마련하세요.');
+        return prev;
+      }
 
-    const updated: PlayerStats = {
-      ...stats,
-      gold: stats.gold - nextPrice,
-      purchasedEquipmentIds: [...stats.purchasedEquipmentIds, item.id]
-    };
-    saveStats(updated);
-    alert(`🛒 "${item.name}" ${currentLevel > 0 ? `강화 완료! (Lv ${currentLevel + 1})` : '구매 완료!'} 주방에서 바로 사용할 수 있어요.`);
+      playPixelSFX('upgrade');
+      const updated: PlayerStats = {
+        ...prev,
+        gold: prev.gold - nextPrice,
+        purchasedEquipmentIds: [...prev.purchasedEquipmentIds, item.id],
+      };
+      try {
+        localStorage.setItem(STORAGE_KEYS.gameSave, JSON.stringify(updated));
+      } catch {
+        // ignore quota
+      }
+      window.alert(
+        `🛒 "${item.name}" ${currentLevel > 0 ? `강화 완료! (Lv ${currentLevel + 1})` : '구매 완료!'} 주방에서 바로 사용할 수 있어요.`
+      );
+      purchaseLockRef.current = false;
+      return updated;
+    });
   };
 
   const handleToggleSfx = () => {

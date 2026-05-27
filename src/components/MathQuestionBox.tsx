@@ -39,6 +39,7 @@ export const MathQuestionBox: React.FC<MathQuestionBoxProps> = ({
   }, [question.id]);
 
   const handleKeypadClick = (val: string) => {
+    if (inputDisabled) return;
     if (val === 'C') {
       setUserInput('');
     } else if (val === '⌫') {
