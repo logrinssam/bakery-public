@@ -22,7 +22,8 @@ function makeVersionCheckScript(buildId: string, base: string): string {
     '확인을 누르면 새로고침해 주세요.\n' +
     '공부한 진행은 사라지지 않아요.\n' +
     '(엔터 버그로 단계만 튄 경우 맞춰 드려요)';
-  return `(function(){var B=${JSON.stringify(buildId)};var R=${JSON.stringify(root)};var MSG=${JSON.stringify(updateMsg)};function ck(){fetch(R+"version.json?t="+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.json():null}).then(function(d){if(d&&d.id&&d.id!==B){try{alert(MSG)}catch(e){}location.reload()}}).catch(function(){})}ck();setInterval(ck,3e4);document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible")ck()})})();`;
+  const ackKey = 'pixel_bakery_update_ack_v1';
+  return `(function(){var B=${JSON.stringify(buildId)};var R=${JSON.stringify(root)};var MSG=${JSON.stringify(updateMsg)};var AK=${JSON.stringify(ackKey)};function ck(){fetch(R+"version.json?t="+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.json():null}).then(function(d){if(!d||!d.id||d.id===B)return;try{if(sessionStorage.getItem(AK)===d.id)return}catch(e){}try{sessionStorage.setItem(AK,d.id)}catch(e){}try{alert(MSG)}catch(e){}location.reload()}).catch(function(){})}ck();setInterval(ck,3e4);document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible")ck()})})();`;
 }
 
 /** dist/version.json + version-check.js + 번들에 동일 ID 주입 */

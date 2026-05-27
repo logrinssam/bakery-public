@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
+import { acknowledgeBuildId, shouldShowUpdatePrompt } from '../lib/updateAck';
 
 declare const __APP_BUILD_ID__: string;
 
@@ -12,10 +13,14 @@ const VERSION_URL = `${import.meta.env.BASE_URL}version.json`;
 export function AppUpdateBanner() {
   const [updateReady, setUpdateReady] = useState(false);
   const [reloading, setReloading] = useState(false);
+  const pendingRemoteIdRef = useRef<string | null>(null);
 
   const applyUpdate = () => {
     if (reloading) return;
+    const remoteId = pendingRemoteIdRef.current;
+    if (remoteId) acknowledgeBuildId(remoteId);
     setReloading(true);
+    setUpdateReady(false);
     window.location.reload();
   };
 
@@ -25,8 +30,14 @@ export function AppUpdateBanner() {
       const res = await fetch(`${VERSION_URL}?t=${Date.now()}`, { cache: 'no-store' });
       if (!res.ok) return;
       const data = (await res.json()) as { id?: string };
-      if (data.id && data.id !== __APP_BUILD_ID__) {
+      if (!data.id) return;
+
+      if (shouldShowUpdatePrompt(data.id, __APP_BUILD_ID__)) {
+        pendingRemoteIdRef.current = data.id;
         setUpdateReady(true);
+      } else {
+        pendingRemoteIdRef.current = null;
+        setUpdateReady(false);
       }
     } catch {
       // 네트워크 오류 — 무시
