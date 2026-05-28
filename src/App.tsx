@@ -806,10 +806,11 @@ export default function App() {
           <div className="flex items-center gap-1.5 sm:gap-3 ml-auto flex-wrap sm:flex-nowrap">
             {pinSaveId && (
               <span
-                className="shrink-0 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg border border-white/15 bg-[#4E342E] text-white font-sans text-[9px] sm:text-[10px] font-bold tracking-tight opacity-90"
-                title="스테이지 클리어·프로필 저장 시 클라우드에 이어하기"
+                className="shrink-0 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg border border-white/15 bg-[#4E342E] text-white font-sans text-[9px] sm:text-[10px] font-bold tracking-tight opacity-90 max-w-[9.5rem] sm:max-w-none text-center leading-tight"
+                title="단계 클리어·프로필 저장 시 클라우드에 자동 저장됩니다. 같은 학교·이름·비밀번호로 다른 기기에서도 이어할 수 있어요."
               >
-                이어하기{syncStatus === 'saving' ? ' · 저장중…' : syncStatus === 'loading' ? ' · 불러오는 중…' : ''}
+                단계 클리어 시 자동 저장
+                {syncStatus === 'saving' ? ' · 저장중…' : syncStatus === 'loading' ? ' · 불러오는 중…' : ''}
               </span>
             )}
 
