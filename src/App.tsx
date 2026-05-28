@@ -6,7 +6,6 @@ import { PixelSprite, BREADS_METADATA } from './components/PixelSprite';
 import { MathQuestionBox } from './components/MathQuestionBox';
 import { CabinetScreen } from './components/CabinetScreen';
 import { HallOfFame } from './components/HallOfFame';
-import { AppUpdateBanner } from './components/AppUpdateBanner';
 import {
   ProgressRecoveryNotice,
   type ProgressRecoveryInfo,
@@ -256,22 +255,22 @@ export default function App() {
     setIsWrong(false);
   };
 
-  const confirmAbandonActiveStage = (): boolean => {
+  const confirmAbandonActiveStage = (goingToMap = false): boolean => {
     if (activeStageId === null) return true;
-    return window.confirm(
-      '스테이지를 중단할까요?\n\n이번 스테이지에서 번 골드·콤보는 저장되지 않습니다.'
-    );
+    const notice = '지금까지의 진행도와 골드는 저장되지 않습니다.';
+    const question = goingToMap ? '맵으로 돌아가시겠습니까?' : '스테이지를 중단하시겠습니까?';
+    return window.confirm(`${notice}\n\n${question}`);
   };
 
   const exitKitchenToMap = () => {
-    if (!confirmAbandonActiveStage()) return;
+    if (!confirmAbandonActiveStage(true)) return;
     if (activeStageId !== null) abandonStageRun();
     openPlayPage('map');
   };
 
   const leaveKitchenForPage = (target: 'collection' | 'fame' | 'upgrades' | 'map') => {
     if (page === 'kitchen' && activeStageId !== null) {
-      if (!confirmAbandonActiveStage()) return;
+      if (!confirmAbandonActiveStage(target === 'map')) return;
       abandonStageRun();
     }
     if (target === 'map') openPlayPage('map');
@@ -775,9 +774,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FDF6E3] flex flex-col items-center justify-between font-sans selection:bg-brand-pink/30 scrollbar-thin">
-      <AppUpdateBanner />
-
+    <div className="min-h-screen min-h-[100dvh] overflow-x-hidden bg-[#FDF6E3] flex flex-col items-center justify-between font-sans selection:bg-brand-pink/30 scrollbar-thin">
       {progressRecovery && (
         <ProgressRecoveryNotice
           info={progressRecovery}

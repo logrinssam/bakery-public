@@ -33,6 +33,8 @@ jobs:
       - name: Build
         env:
           GITHUB_PAGES: "true"
+          # 필요 시 수동 지정 (기본은 /<repo>/ 자동 추론)
+          # GITHUB_PAGES_BASE: "/bakery/"
           # OG/Canonical은 기존 도메인 유지 (Pages는 백업 링크)
           VITE_PUBLIC_APP_URL: "https://pixel-bakery.xn--9d0blmm1xg2knrf.com"
         run: npm run build

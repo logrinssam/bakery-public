@@ -16,10 +16,23 @@
 }
 
 @layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
   body {
     font-family: 'Quicksand', sans-serif;
     background-color: #FDF6E3;
     color: #5D4037;
+    min-height: 100dvh;
+    overflow-x: hidden;
   }
 }
 

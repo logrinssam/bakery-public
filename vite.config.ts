@@ -89,7 +89,10 @@ export default defineConfig(({mode}) => {
   const production = mode === 'production';
   const githubPages = process.env.GITHUB_PAGES === 'true';
   const buildId = resolveBuildId();
-  const appBase = githubPages ? '/bakery-public/' : '/';
+  const repoFromEnv = (process.env.GITHUB_REPOSITORY ?? '').split('/')[1]?.trim();
+  const pagesBaseFromEnv = (process.env.GITHUB_PAGES_BASE ?? '').trim();
+  const inferredPagesBase = repoFromEnv ? `/${repoFromEnv.replace(/^\/|\/$/g, '')}/` : '/';
+  const appBase = githubPages ? (pagesBaseFromEnv || inferredPagesBase) : '/';
 
   return {
     // GitHub Pages는 /<repo>/ 서브패스로 서빙됨
