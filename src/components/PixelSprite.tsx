@@ -135,10 +135,12 @@ export const PixelSprite: React.FC<PixelSpriteProps> = ({
   const col = index % 8;
   const row = Math.floor(index / 8);
 
+  const assetUrl = (p: string) => `${import.meta.env.BASE_URL}${p.replace(/^\/+/, '')}`;
+
   const getSpriteSheetPath = () => {
-    if (type === 'bread') return '/assets/sprites/breads_8x8_128.png';
-    if (type === 'equipment') return '/assets/sprites/equipment_8x8_128.png';
-    return '/assets/sprites/ui_8x8_64.png';
+    if (type === 'bread') return assetUrl('/assets/sprites/breads_8x8_128.png');
+    if (type === 'equipment') return assetUrl('/assets/sprites/equipment_8x8_128.png');
+    return assetUrl('/assets/sprites/ui_8x8_64.png');
   };
 
   const sheetSizeMultiplier = 8; // 8x8 grid

@@ -750,7 +750,7 @@ export default function App() {
     else if (shopType === ShopType.ROYAL) fileName = 'shop_royal.png';
     else fileName = 'shop_final.png';
 
-    const bgUrl = `/assets/shops/${fileName}`;
+    const bgUrl = `${import.meta.env.BASE_URL}assets/shops/${fileName}`;
 
     return (
       <div className="absolute inset-0 z-0 select-none pointer-events-none opacity-20 bg-cover bg-center" style={{ backgroundImage: `url('${bgUrl}')` }}>
