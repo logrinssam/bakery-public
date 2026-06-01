@@ -5,8 +5,15 @@ import {
   isFirebaseConfigured,
   fetchHallRecords,
   addHallRecordToFirebase,
+  updateHallRecordComment,
   HALL_RECORDS_TOP_LIMIT
 } from '../services/firebaseHall';
+import {
+  findOwnHallRecord,
+  isInappropriateHallComment,
+  needsHallCommentRevision,
+  shouldHideHallComment,
+} from '../lib/hallCommentModeration';
 import {
   filterRecordsForPublishedRanking,
   formatNextRankingPublishLabel,
@@ -36,7 +43,8 @@ import {
   FileText, 
   CheckCircle,
   HelpCircle,
-  RefreshCw
+  RefreshCw,
+  Lock
 } from 'lucide-react';
 
 const HALL_AUTO_REFRESH_MS = 60 * 60 * 1000;
@@ -73,6 +81,24 @@ interface HallOfFameProps {
   stats: PlayerStats;
   onClose: () => void;
   onRegister: (name: string, school: string, comment: string) => void;
+  onUpdateComment?: (comment: string) => void;
+}
+
+function HallCommentDisplay({ comment }: { comment: string }) {
+  return (
+    <div className="relative mt-1.5 min-h-[1.5rem]">
+      <p
+        className="font-sans text-stone-600 text-xs sm:text-sm font-bold italic leading-tight blur-[3px] select-none opacity-40 pointer-events-none"
+        aria-hidden="true"
+      >
+        "{comment}"
+      </p>
+      <p className="absolute inset-0 flex items-center gap-1.5 font-sans text-stone-500 text-xs sm:text-sm font-bold">
+        <Lock className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+        <span>검토 중인 한마디</span>
+      </p>
+    </div>
+  );
 }
 
 const HALL_RECORDS_KEY = 'pixel_bakery_hall_records_v2';
@@ -80,7 +106,8 @@ const HALL_RECORDS_KEY = 'pixel_bakery_hall_records_v2';
 export const HallOfFame: React.FC<HallOfFameProps> = ({
   stats,
   onClose,
-  onRegister
+  onRegister,
+  onUpdateComment
 }) => {
   const [records, setRecords] = useState<HallRecord[]>([]);
   const [userName, setUserName] = useState('');
@@ -99,6 +126,9 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
   const [lastManualRefreshAt, setLastManualRefreshAt] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [commentRevision, setCommentRevision] = useState('');
+  const [commentRevisionError, setCommentRevisionError] = useState<string | null>(null);
+  const [revisingComment, setRevisingComment] = useState(false);
   const [uiTick, setUiTick] = useState(() => Date.now());
   const lastManualRefreshAtRef = useRef<number | null>(null);
 
@@ -429,7 +459,8 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
       date: recordDate,
       stars,
       highestStreak,
-      createdAt
+      createdAt,
+      commentHidden: isInappropriateHallComment(trimmedComment)
     };
 
     let recordId = Date.now().toString();
@@ -461,6 +492,66 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
       highestStreak,
       recordDate
     );
+
+    if (recordPayload.commentHidden) {
+      window.alert(
+        '등록하신 한마디는 다른 친구들에게 보이지 않도록 숨겨졌어요.\n\n수업에 어울리는 기념 한마디를 다시 입력해 주세요.'
+      );
+    }
+  };
+
+  const handleCommentRevisionSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (revisingComment) return;
+
+    const trimmed = sanitizeDisplayText(commentRevision, INPUT_LIMITS.hallComment);
+    if (!trimmed) {
+      setCommentRevisionError('새로운 한마디를 입력해 주세요.');
+      return;
+    }
+    if (isInappropriateHallComment(trimmed)) {
+      setCommentRevisionError('수업에 어울리는 긍정적인 한마디로 다시 써 주세요. (불만·욕설·게임 해명은 안 돼요)');
+      return;
+    }
+
+    setCommentRevisionError(null);
+    setRevisingComment(true);
+
+    const ownRecord = findOwnHallRecord(records, stats);
+    const name = stats.hallName?.trim() || userName.trim();
+    const school = stats.hallSchool?.trim() || schoolQuery.trim();
+
+    try {
+      if (isFirebaseConfigured() && ownRecord?.id) {
+        const ok = await updateHallRecordComment(ownRecord.id, trimmed);
+        if (!ok) {
+          setCommentRevisionError('서버에 저장하지 못했습니다. 다시 시도해 주세요.');
+          setRevisingComment(false);
+          return;
+        }
+      }
+
+      onUpdateComment?.(trimmed);
+      if (name && school) {
+        onRegister(name, school, trimmed);
+      }
+
+      const updated = records.map((rec) =>
+        ownRecord && rec.id === ownRecord.id
+          ? { ...rec, comment: trimmed, commentHidden: false }
+          : rec
+      );
+      persistRecords(updated);
+      setCommentRevision('');
+
+      if (isFirebaseConfigured()) {
+        await refreshHallRecords({ bypassCooldown: true, forceRemote: true });
+      }
+    } catch {
+      setCommentRevisionError('저장 중 오류가 났습니다. 다시 시도해 주세요.');
+    } finally {
+      setRevisingComment(false);
+    }
   };
 
   const rankingNow = new Date(rankingClock);
@@ -514,6 +605,7 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
   const isEligibleToRegister =
     stats.stageProgress >= 50 && !stats.hallOfFameRegistered && !registered;
   const isAlreadyRegistered = stats.hallOfFameRegistered || registered;
+  const showCommentRevision = needsHallCommentRevision(records, stats);
 
   const currentRegisteredName = stats.hallName || userName;
   const currentRegisteredSchool = stats.hallSchool || schoolQuery;
@@ -804,6 +896,53 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
         </div>
       ) : (
         /* If player already registered, display their customized certificate card so they can download it again! */
+        <>
+        {showCommentRevision && (
+          <form
+            onSubmit={(e) => void handleCommentRevisionSubmit(e)}
+            className="w-full bg-red-50 border-4 border-red-300 rounded-3xl p-5 sm:p-6 flex flex-col gap-3 shadow-sm"
+            id="hall-comment-revision-form"
+          >
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 bg-white border-2 border-red-300 rounded-xl flex items-center justify-center shrink-0">
+                <Lock className="w-5 h-5 text-red-500" aria-hidden="true" />
+              </div>
+              <div>
+                <h3 className="font-display font-black text-[#5D4037] text-base sm:text-lg">
+                  기념 한마디를 다시 입력해 주세요
+                </h3>
+                <p className="font-sans text-stone-600 text-xs sm:text-sm font-semibold mt-1 break-keep leading-relaxed">
+                  이전 한마디는 다른 친구들에게 <b>자물쇠·흐림</b>으로만 보이고, 수업에 어울리지 않아 숨겨졌어요.
+                  베이커리를 완성한 뿌듯한 마음을 담아 새로 써 주세요.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                value={commentRevision}
+                onChange={(e) => {
+                  setCommentRevision(e.target.value);
+                  setCommentRevisionError(null);
+                }}
+                maxLength={INPUT_LIMITS.hallComment}
+                placeholder="예: 50단계 완주! 수학 파티셰가 되었어요!"
+                className="flex-1 bg-white border-4 border-[#5D4037] rounded-2xl px-4 py-3 font-sans text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#FF85A1]/20"
+                required
+              />
+              <button
+                type="submit"
+                disabled={revisingComment}
+                className="btn-pixel-pink px-5 py-3 rounded-2xl font-display text-sm font-black whitespace-nowrap disabled:opacity-60"
+              >
+                {revisingComment ? '저장 중…' : '새 한마디 저장'}
+              </button>
+            </div>
+            {commentRevisionError && (
+              <p className="font-sans text-[11px] text-red-600 font-bold">{commentRevisionError}</p>
+            )}
+          </form>
+        )}
         <div className="bg-gradient-to-r from-amber-50 to-amber-100/50 border-4 border-[#F4D03F] rounded-3xl p-6 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm" id="hall-already-submitted">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 bg-amber-200 border-4 border-amber-500 rounded-2xl flex items-center justify-center animate-bounce text-xl">
@@ -834,6 +973,7 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
             인증 임명장 이미지 저장 (.PNG)
           </button>
         </div>
+        </>
       )}
 
       {/* Success certificate notice badge */}
@@ -963,9 +1103,13 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
                             </span>
                           )}
                         </div>
-                        <p className="font-sans text-stone-600 text-xs sm:text-sm mt-1.5 font-bold italic leading-tight">
-                          "{rec.comment}"
-                        </p>
+                        {shouldHideHallComment(rec) ? (
+                          <HallCommentDisplay comment={rec.comment} />
+                        ) : (
+                          <p className="font-sans text-stone-600 text-xs sm:text-sm mt-1.5 font-bold italic leading-tight">
+                            "{rec.comment}"
+                          </p>
+                        )}
                       </div>
                     </div>
 

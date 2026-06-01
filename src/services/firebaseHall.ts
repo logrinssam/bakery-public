@@ -1,12 +1,15 @@
 import {
   addDoc,
   collection,
+  doc,
   getDocs,
   orderBy,
   query,
-  limit
+  limit,
+  updateDoc
 } from 'firebase/firestore';
 import { clampHallSubmitStats, sanitizeDisplayText, INPUT_LIMITS } from '../lib/safeStorage';
+import { isInappropriateHallComment } from '../lib/hallCommentModeration';
 import { getFirebaseDb, isFirebaseConfigured } from '../lib/firebase';
 import type { HallRecord } from '../types';
 
@@ -29,7 +32,8 @@ function docToRecord(id: string, data: Record<string, unknown>): HallRecord {
     date: String(data.date ?? ''),
     stars: Number(data.stars ?? 0),
     highestStreak: Number(data.highestStreak ?? 0),
-    createdAt
+    createdAt,
+    commentHidden: Boolean(data.commentHidden)
   };
 }
 
@@ -64,6 +68,8 @@ export async function addHallRecordToFirebase(
 
   if (!name || !schoolName || !comment) return null;
 
+  const commentHidden = isInappropriateHallComment(comment);
+
   const ref = await addDoc(collection(db, COLLECTION), {
     name,
     schoolName,
@@ -71,9 +77,28 @@ export async function addHallRecordToFirebase(
     date,
     stars,
     highestStreak,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    commentHidden
   });
   return ref.id;
+}
+
+export async function updateHallRecordComment(
+  recordId: string,
+  comment: string
+): Promise<boolean> {
+  const db = getFirebaseDb();
+  if (!db || !recordId) return false;
+
+  const trimmed = sanitizeDisplayText(comment, INPUT_LIMITS.hallComment);
+  if (!trimmed) return false;
+  if (isInappropriateHallComment(trimmed)) return false;
+
+  await updateDoc(doc(db, COLLECTION, recordId), {
+    comment: trimmed,
+    commentHidden: false
+  });
+  return true;
 }
 
 export { isFirebaseConfigured };

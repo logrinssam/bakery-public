@@ -88,4 +88,6 @@ export interface HallRecord {
   highestStreak: number;
   /** ISO timestamp — used for scheduled ranking snapshot cutoff */
   createdAt?: string;
+  /** 부적절·검토 필요 시 공개 목록에서 숨김 */
+  commentHidden?: boolean;
 }

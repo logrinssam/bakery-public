@@ -155,6 +155,7 @@ export function parseHallRecords(raw: unknown): HallRecord[] {
         typeof item.createdAt === 'string' && item.createdAt.length <= 40
           ? item.createdAt
           : undefined,
+      commentHidden: Boolean(item.commentHidden),
     });
   }
   return records;

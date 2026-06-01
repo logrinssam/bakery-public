@@ -725,6 +725,13 @@ export default function App() {
     });
   };
 
+  const handleUpdateHallComment = (comment: string) => {
+    saveStats({
+      ...stats,
+      hallComment: sanitizeDisplayText(comment, INPUT_LIMITS.hallComment)
+    });
+  };
+
   // Render Category Specific Aesthetic Shops Theme
   const getBackgroundStyles = (shopType: ShopType) => {
     // Elegant warm gradients representing cozy Korean custom pixel bakeries if backgrounds fallback
@@ -1461,6 +1468,7 @@ export default function App() {
             stats={stats}
             onClose={() => openPlayPage('map')}
             onRegister={handleRegisterToHallOfFame}
+            onUpdateComment={handleUpdateHallComment}
           />
         )}
 
