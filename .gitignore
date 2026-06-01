@@ -125,6 +125,10 @@ dist
 # Firebase cache directory
 .firebase/
 
+# Admin SDK service account (로컬 count:users 전용, 절대 커밋 금지)
+firebase-service-account.json
+*-firebase-adminsdk-*.json
+
 # TernJS port file
 .tern-port
 

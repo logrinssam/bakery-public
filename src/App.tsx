@@ -1144,6 +1144,21 @@ export default function App() {
         {/* 2. Interactive Stage Map Hub */}
         {page === 'map' && (
           <div className="w-full flex flex-col gap-4 sm:gap-6" id="baker-stage-map-panel">
+            <div className="flex justify-center sm:justify-start">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border-2 border-[#5D4037] bg-white shadow-sm">
+                <span className="font-sans text-xs sm:text-sm font-black text-[#C0392B] tracking-tight">
+                  5천명+ 명예 파티셰 도전 중!
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setPage('fame')}
+                  className="px-2.5 py-1 rounded-full bg-[#FFF4E0] border-2 border-[#5D4037] text-[10px] sm:text-xs font-sans font-black text-[#5D4037] hover:bg-amber-100 cursor-pointer"
+                  title="명예의 전당 보기"
+                >
+                  전당 보기
+                </button>
+              </div>
+            </div>
             
             {/* Quick dashboard cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-6">

@@ -649,6 +649,9 @@ export const HallOfFame: React.FC<HallOfFameProps> = ({
               <span className="text-amber-800">{getRankingIntervalDescription(rankingNow)}</span> 공개됩니다.
               (현재 {getRankingPublishIntervalHours(rankingNow)}시간 주기 · 7일마다 주기가 1시간씩 늘어납니다)
             </p>
+            <p className="font-sans text-xs font-black text-[#C0392B] mt-1.5">
+              지금까지 5천명+이 명예 파티셰에 도전했어요. 당신의 기록도 남겨보세요!
+            </p>
           </div>
         </div>
 
