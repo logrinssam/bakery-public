@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { PlayerStats, ShopType, MathQuestion, Stage, Equipment, QuestionCategory } from './types';
 import { STAGES, generateQuestionsForStage, getQuestionsPerStage, TOTAL_STAGE_COUNT } from './data/stages';
 import { UPGRADE_ITEMS, getActiveGoldMultiplierBoost, getEquipmentLevel, getEquipmentNextPrice, getOwnedEquipmentIds, MAX_EQUIPMENT_LEVEL } from './data/equipment';
@@ -31,6 +31,10 @@ import { ensureAnonSignedIn } from './services/firebaseAnon';
 import { clampStatsForCloudSave, loadPinSave, savePinStats } from './services/firebasePinSave';
 import { sha256Hex } from './lib/cryptoHash';
 import { isFirebaseConfigured } from './lib/firebase';
+import {
+  describeSyncProgressChange,
+  mergePlayerStatsForSync,
+} from './lib/cloudSync';
 import { 
   Trophy, 
   Map, 
@@ -47,8 +51,13 @@ import {
   Award,
   BookOpen,
   Volume2,
-  VolumeX
+  VolumeX,
+  RefreshCw,
+  Cloud,
+  CloudOff
 } from 'lucide-react';
+
+type CloudSyncUi = 'idle' | 'synced' | 'error' | 'offline' | 'needs-profile';
 
 const INITIAL_STATS: PlayerStats = {
   stageProgress: 1, // Start at stage 1
@@ -130,8 +139,12 @@ export default function App() {
 
   const [pinSaveId, setPinSaveId] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'saving' | 'error'>('idle');
+  const [cloudSyncUi, setCloudSyncUi] = useState<CloudSyncUi>('idle');
   const [progressRecovery, setProgressRecovery] = useState<ProgressRecoveryInfo | null>(null);
   const hydratedRef = useRef(false);
+  const statsRef = useRef<PlayerStats>(INITIAL_STATS);
+  const syncInFlightRef = useRef(false);
+  const bootCloudSyncDoneRef = useRef(false);
 
   const PROGRESS_RECOVERY_SEEN_KEY = 'pixel_bakery_progress_fix_notice_v1';
   /** 정답·오답·굽기 애니 중복 처리 방지 (엔터 연타 등) */
@@ -187,6 +200,10 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    statsRef.current = stats;
+  }, [stats]);
+
+  useEffect(() => {
     if (!isFirebaseConfigured()) return;
     void ensureAnonSignedIn();
   }, []);
@@ -227,6 +244,7 @@ export default function App() {
   const saveStats = (newStats: PlayerStats) => {
     const safe = import.meta.env.PROD ? clampStatsForCloudSave(newStats) : newStats;
     setStats(safe);
+    statsRef.current = safe;
     try {
       localStorage.setItem(STORAGE_KEYS.gameSave, JSON.stringify(safe));
     } catch {
@@ -235,6 +253,83 @@ export default function App() {
   };
 
   const cloneStats = (s: PlayerStats): PlayerStats => JSON.parse(JSON.stringify(s)) as PlayerStats;
+
+  const syncWithCloud = useCallback(
+    async (options?: { silent?: boolean }) => {
+      if (!isFirebaseConfigured()) {
+        setCloudSyncUi('offline');
+        return false;
+      }
+
+      const saveId = pinSaveId;
+      const local = statsRef.current;
+
+      if (!saveId || saveId.length < 32) {
+        setCloudSyncUi('needs-profile');
+        return false;
+      }
+      if (!local.hallName?.trim() || !local.hallSchool?.trim()) {
+        setCloudSyncUi('needs-profile');
+        return false;
+      }
+      if (syncInFlightRef.current) return false;
+
+      syncInFlightRef.current = true;
+      setSyncStatus('loading');
+      const before = cloneStats(local);
+
+      try {
+        await ensureAnonSignedIn();
+        const remote = await loadPinSave(saveId, INITIAL_STATS);
+        const merged = remote
+          ? mergePlayerStatsForSync(local, remote)
+          : local;
+
+        await savePinStats(saveId, merged);
+        saveStats(merged);
+        if (merged.hallSchool && merged.hallName) {
+          void recordSchoolUser(merged.hallSchool, merged.hallName, saveId);
+        }
+
+        setCloudSyncUi('synced');
+        setSyncStatus('idle');
+
+        if (!options?.silent) {
+          const msg = describeSyncProgressChange(before, merged);
+          window.alert(
+            msg ??
+              '클라우드에 진행을 저장했습니다. 같은 학교·이름·비밀번호로 다른 기기에서도 이어할 수 있어요.'
+          );
+        }
+        return true;
+      } catch {
+        setCloudSyncUi('error');
+        setSyncStatus('error');
+        if (!options?.silent) {
+          window.alert(
+            '클라우드 동기화에 실패했습니다.\n\n학교 Wi-Fi에서 Firebase가 막혀 있을 수 있어요. 집·모바일 데이터에서 다시 「다른 기기와 동기화」를 눌러 주세요.'
+          );
+        }
+        return false;
+      } finally {
+        syncInFlightRef.current = false;
+      }
+    },
+    [pinSaveId]
+  );
+
+  useEffect(() => {
+    if (!hydratedRef.current || bootCloudSyncDoneRef.current) return;
+    if (!pinSaveId) return;
+    if (!stats.hallName?.trim() || !stats.hallSchool?.trim()) return;
+    if (!isFirebaseConfigured()) {
+      setCloudSyncUi('offline');
+      return;
+    }
+
+    bootCloudSyncDoneRef.current = true;
+    void syncWithCloud({ silent: true });
+  }, [pinSaveId, stats.hallName, stats.hallSchool, syncWithCloud]);
 
   /** 주방 진행 중 — 화면만 갱신, 저장소에는 쓰지 않음 */
   const setStatsDuringStage = (newStats: PlayerStats) => {
@@ -280,7 +375,10 @@ export default function App() {
 
   /** 클라우드 이어하기 — 스테이지 클리어·프로필 저장 시에만 (비용·쓰기 횟수 절약) */
   const syncProgressToCloud = async (progress: PlayerStats) => {
-    if (!pinSaveId || !isFirebaseConfigured()) return;
+    if (!pinSaveId || !isFirebaseConfigured()) {
+      if (!isFirebaseConfigured()) setCloudSyncUi('offline');
+      return;
+    }
     try {
       setSyncStatus('saving');
       await ensureAnonSignedIn();
@@ -288,9 +386,11 @@ export default function App() {
       if (progress.hallSchool && progress.hallName) {
         void recordSchoolUser(progress.hallSchool, progress.hallName, pinSaveId);
       }
+      setCloudSyncUi('synced');
       setSyncStatus('idle');
     } catch {
-      setSyncStatus('idle');
+      setCloudSyncUi('error');
+      setSyncStatus('error');
     }
   };
 
@@ -398,7 +498,7 @@ export default function App() {
       }
 
       const next: PlayerStats = {
-        ...(remote ?? stats),
+        ...(remote ? mergePlayerStatsForSync(stats, remote) : stats),
         hallName: name,
         hallSchool: resolved,
       };
@@ -417,7 +517,9 @@ export default function App() {
           void recordSchoolUser(resolved, name, saveId);
           void recordSchoolVisit(resolved, { force: true });
           cloudOk = true;
+          setCloudSyncUi('synced');
         } catch {
+          setCloudSyncUi('error');
           // 로컬은 저장됨 — 게임은 시작 가능
         }
       }
@@ -811,14 +913,58 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-3 ml-auto flex-wrap sm:flex-nowrap">
-            {pinSaveId && (
-              <span
-                className="shrink-0 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg border border-white/15 bg-[#4E342E] text-white font-sans text-[9px] sm:text-[10px] font-bold tracking-tight opacity-90 max-w-[9.5rem] sm:max-w-none text-center leading-tight"
-                title="단계 클리어·프로필 저장 시 클라우드에 자동 저장됩니다. 같은 학교·이름·비밀번호로 다른 기기에서도 이어할 수 있어요."
-              >
-                단계 클리어 시 자동 저장
-                {syncStatus === 'saving' ? ' · 저장중…' : syncStatus === 'loading' ? ' · 불러오는 중…' : ''}
-              </span>
+            {pinSaveId && isProfileComplete() && (
+              <div className="flex items-center gap-1 shrink-0 flex-wrap justify-end">
+                <span
+                  className={`inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg border font-sans text-[9px] sm:text-[10px] font-bold tracking-tight leading-tight ${
+                    cloudSyncUi === 'synced'
+                      ? 'border-emerald-400/60 bg-emerald-900/40 text-emerald-100'
+                      : cloudSyncUi === 'error'
+                        ? 'border-red-400/60 bg-red-900/40 text-red-100'
+                        : cloudSyncUi === 'offline'
+                          ? 'border-stone-400/40 bg-[#4E342E] text-stone-300'
+                          : 'border-white/15 bg-[#4E342E] text-white/90'
+                  }`}
+                  title="단계 클리어 시 클라우드에 저장됩니다. 앱을 켤 때·동기화 버튼으로 다른 기기 진행을 맞출 수 있어요."
+                >
+                  {cloudSyncUi === 'offline' ? (
+                    <CloudOff className="w-3 h-3 shrink-0" aria-hidden />
+                  ) : (
+                    <Cloud className="w-3 h-3 shrink-0" aria-hidden />
+                  )}
+                  <span className="whitespace-nowrap">
+                    {syncStatus === 'saving'
+                      ? '클라우드 저장 중…'
+                      : syncStatus === 'loading'
+                        ? '클라우드 불러오는 중…'
+                        : cloudSyncUi === 'synced'
+                          ? '클라우드 저장됨'
+                          : cloudSyncUi === 'error'
+                            ? '클라우드 저장 실패'
+                            : cloudSyncUi === 'offline'
+                              ? '클라우드 미연결'
+                              : '클라우드 대기'}
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  disabled={syncStatus === 'loading' || syncStatus === 'saving'}
+                  onClick={() => void syncWithCloud()}
+                  className={`inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg border-2 font-sans text-[9px] sm:text-[10px] font-black transition-colors ${
+                    syncStatus === 'loading' || syncStatus === 'saving'
+                      ? 'border-stone-500 bg-stone-600 text-stone-300 cursor-wait'
+                      : 'border-[#F4D03F] bg-[#4E342E] text-[#F4D03F] hover:bg-[#6D4C41] cursor-pointer'
+                  }`}
+                  title="학교·집·핸드폰 등 다른 기기와 진행 맞추기 (같은 학교·이름·4자리 비번)"
+                >
+                  <RefreshCw
+                    className={`w-3 h-3 shrink-0 ${syncStatus === 'loading' ? 'animate-spin' : ''}`}
+                    aria-hidden
+                  />
+                  <span className="whitespace-nowrap hidden sm:inline">다른 기기와 동기화</span>
+                  <span className="whitespace-nowrap sm:hidden">동기화</span>
+                </button>
+              </div>
             )}
 
             <a
