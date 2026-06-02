@@ -52,12 +52,8 @@ import {
   BookOpen,
   Volume2,
   VolumeX,
-  RefreshCw,
-  Cloud,
-  CloudOff
+  RefreshCw
 } from 'lucide-react';
-
-type CloudSyncUi = 'idle' | 'synced' | 'error' | 'offline' | 'needs-profile';
 
 const INITIAL_STATS: PlayerStats = {
   stageProgress: 1, // Start at stage 1
@@ -139,7 +135,6 @@ export default function App() {
 
   const [pinSaveId, setPinSaveId] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'saving' | 'error'>('idle');
-  const [cloudSyncUi, setCloudSyncUi] = useState<CloudSyncUi>('idle');
   const [progressRecovery, setProgressRecovery] = useState<ProgressRecoveryInfo | null>(null);
   const hydratedRef = useRef(false);
   const statsRef = useRef<PlayerStats>(INITIAL_STATS);
@@ -257,7 +252,6 @@ export default function App() {
   const syncWithCloud = useCallback(
     async (options?: { silent?: boolean }) => {
       if (!isFirebaseConfigured()) {
-        setCloudSyncUi('offline');
         return false;
       }
 
@@ -265,11 +259,9 @@ export default function App() {
       const local = statsRef.current;
 
       if (!saveId || saveId.length < 32) {
-        setCloudSyncUi('needs-profile');
         return false;
       }
       if (!local.hallName?.trim() || !local.hallSchool?.trim()) {
-        setCloudSyncUi('needs-profile');
         return false;
       }
       if (syncInFlightRef.current) return false;
@@ -291,7 +283,6 @@ export default function App() {
           void recordSchoolUser(merged.hallSchool, merged.hallName, saveId);
         }
 
-        setCloudSyncUi('synced');
         setSyncStatus('idle');
 
         if (!options?.silent) {
@@ -303,7 +294,6 @@ export default function App() {
         }
         return true;
       } catch {
-        setCloudSyncUi('error');
         setSyncStatus('error');
         if (!options?.silent) {
           window.alert(
@@ -323,7 +313,6 @@ export default function App() {
     if (!pinSaveId) return;
     if (!stats.hallName?.trim() || !stats.hallSchool?.trim()) return;
     if (!isFirebaseConfigured()) {
-      setCloudSyncUi('offline');
       return;
     }
 
@@ -376,7 +365,6 @@ export default function App() {
   /** 클라우드 이어하기 — 스테이지 클리어·프로필 저장 시에만 (비용·쓰기 횟수 절약) */
   const syncProgressToCloud = async (progress: PlayerStats) => {
     if (!pinSaveId || !isFirebaseConfigured()) {
-      if (!isFirebaseConfigured()) setCloudSyncUi('offline');
       return;
     }
     try {
@@ -386,10 +374,8 @@ export default function App() {
       if (progress.hallSchool && progress.hallName) {
         void recordSchoolUser(progress.hallSchool, progress.hallName, pinSaveId);
       }
-      setCloudSyncUi('synced');
       setSyncStatus('idle');
     } catch {
-      setCloudSyncUi('error');
       setSyncStatus('error');
     }
   };
@@ -517,9 +503,7 @@ export default function App() {
           void recordSchoolUser(resolved, name, saveId);
           void recordSchoolVisit(resolved, { force: true });
           cloudOk = true;
-          setCloudSyncUi('synced');
         } catch {
-          setCloudSyncUi('error');
           // 로컬은 저장됨 — 게임은 시작 가능
         }
       }
@@ -914,57 +898,30 @@ export default function App() {
 
           <div className="flex items-center gap-1.5 sm:gap-3 ml-auto flex-wrap sm:flex-nowrap">
             {pinSaveId && isProfileComplete() && (
-              <div className="flex items-center gap-1 shrink-0 flex-wrap justify-end">
-                <span
-                  className={`inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg border font-sans text-[9px] sm:text-[10px] font-bold tracking-tight leading-tight ${
-                    cloudSyncUi === 'synced'
-                      ? 'border-emerald-400/60 bg-emerald-900/40 text-emerald-100'
-                      : cloudSyncUi === 'error'
-                        ? 'border-red-400/60 bg-red-900/40 text-red-100'
-                        : cloudSyncUi === 'offline'
-                          ? 'border-stone-400/40 bg-[#4E342E] text-stone-300'
-                          : 'border-white/15 bg-[#4E342E] text-white/90'
-                  }`}
-                  title="단계 클리어 시 클라우드에 저장됩니다. 앱을 켤 때·동기화 버튼으로 다른 기기 진행을 맞출 수 있어요."
-                >
-                  {cloudSyncUi === 'offline' ? (
-                    <CloudOff className="w-3 h-3 shrink-0" aria-hidden />
-                  ) : (
-                    <Cloud className="w-3 h-3 shrink-0" aria-hidden />
-                  )}
-                  <span className="whitespace-nowrap">
-                    {syncStatus === 'saving'
-                      ? '클라우드 저장 중…'
-                      : syncStatus === 'loading'
-                        ? '클라우드 불러오는 중…'
-                        : cloudSyncUi === 'synced'
-                          ? '클라우드 저장됨'
-                          : cloudSyncUi === 'error'
-                            ? '클라우드 저장 실패'
-                            : cloudSyncUi === 'offline'
-                              ? '클라우드 미연결'
-                              : '클라우드 대기'}
-                  </span>
+              <button
+                type="button"
+                disabled={syncStatus === 'loading' || syncStatus === 'saving'}
+                onClick={() => void syncWithCloud()}
+                className={`shrink-0 inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg border-2 font-sans text-[9px] sm:text-[10px] font-black transition-colors ${
+                  syncStatus === 'loading' || syncStatus === 'saving'
+                    ? 'border-stone-500 bg-stone-600 text-stone-300 cursor-wait'
+                    : 'border-[#F4D03F] bg-[#4E342E] text-[#F4D03F] hover:bg-[#6D4C41] cursor-pointer'
+                }`}
+                title="학교·집·핸드폰 등 다른 기기와 진행 맞추기 (같은 학교·이름·4자리 비번). 단계 클리어 시 자동 저장됩니다."
+              >
+                <RefreshCw
+                  className={`w-3 h-3 shrink-0 ${syncStatus === 'loading' || syncStatus === 'saving' ? 'animate-spin' : ''}`}
+                  aria-hidden
+                />
+                <span className="whitespace-nowrap hidden sm:inline">
+                  {syncStatus === 'loading' || syncStatus === 'saving'
+                    ? '동기화 중…'
+                    : '다른 기기와 동기화'}
                 </span>
-                <button
-                  type="button"
-                  disabled={syncStatus === 'loading' || syncStatus === 'saving'}
-                  onClick={() => void syncWithCloud()}
-                  className={`inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg border-2 font-sans text-[9px] sm:text-[10px] font-black transition-colors ${
-                    syncStatus === 'loading' || syncStatus === 'saving'
-                      ? 'border-stone-500 bg-stone-600 text-stone-300 cursor-wait'
-                      : 'border-[#F4D03F] bg-[#4E342E] text-[#F4D03F] hover:bg-[#6D4C41] cursor-pointer'
-                  }`}
-                  title="학교·집·핸드폰 등 다른 기기와 진행 맞추기 (같은 학교·이름·4자리 비번)"
-                >
-                  <RefreshCw
-                    className={`w-3 h-3 shrink-0 ${syncStatus === 'loading' ? 'animate-spin' : ''}`}
-                    aria-hidden
-                  />
-                  <span className="whitespace-nowrap hidden sm:inline">다른 기기와 동기화</span>
-                  <span className="whitespace-nowrap sm:hidden">동기화</span>
-                </button>
-              </div>
+                <span className="whitespace-nowrap sm:hidden">
+                  {syncStatus === 'loading' || syncStatus === 'saving' ? '…' : '동기화'}
+                </span>
+              </button>
             )}
 
             <a
