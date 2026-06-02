@@ -1147,7 +1147,7 @@ export default function App() {
             <div className="flex justify-center sm:justify-start">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border-2 border-[#5D4037] bg-white shadow-sm">
                 <span className="font-sans text-xs sm:text-sm font-black text-[#C0392B] tracking-tight">
-                  5천명+ 명예 파티셰 도전 중!
+                  9천명+ 명예 파티셰 도전 중!
                 </span>
                 <button
                   type="button"
