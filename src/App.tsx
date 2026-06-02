@@ -898,30 +898,38 @@ export default function App() {
 
           <div className="flex items-center gap-1.5 sm:gap-3 ml-auto flex-wrap sm:flex-nowrap">
             {pinSaveId && isProfileComplete() && (
-              <button
-                type="button"
-                disabled={syncStatus === 'loading' || syncStatus === 'saving'}
-                onClick={() => void syncWithCloud()}
-                className={`shrink-0 inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg border-2 font-sans text-[9px] sm:text-[10px] font-black transition-colors ${
-                  syncStatus === 'loading' || syncStatus === 'saving'
-                    ? 'border-stone-500 bg-stone-600 text-stone-300 cursor-wait'
-                    : 'border-[#F4D03F] bg-[#4E342E] text-[#F4D03F] hover:bg-[#6D4C41] cursor-pointer'
-                }`}
-                title="학교·집·핸드폰 등 다른 기기와 진행 맞추기 (같은 학교·이름·4자리 비번). 단계 클리어 시 자동 저장됩니다."
-              >
-                <RefreshCw
-                  className={`w-3 h-3 shrink-0 ${syncStatus === 'loading' || syncStatus === 'saving' ? 'animate-spin' : ''}`}
-                  aria-hidden
-                />
-                <span className="whitespace-nowrap hidden sm:inline">
-                  {syncStatus === 'loading' || syncStatus === 'saving'
-                    ? '동기화 중…'
-                    : '다른 기기와 동기화'}
+              <div className="flex items-center gap-1 shrink-0 flex-wrap justify-end">
+                <span
+                  className="shrink-0 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg border border-white/15 bg-[#4E342E] text-white font-sans text-[9px] sm:text-[10px] font-bold tracking-tight opacity-90 text-center leading-tight"
+                  title="단계를 끝까지 클리어하면 클라우드에 자동 저장됩니다. 같은 학교·이름·4자리 비번으로 다른 기기에서 이어할 수 있어요."
+                >
+                  단계 클리어 시 자동 저장
                 </span>
-                <span className="whitespace-nowrap sm:hidden">
-                  {syncStatus === 'loading' || syncStatus === 'saving' ? '…' : '동기화'}
-                </span>
-              </button>
+                <button
+                  type="button"
+                  disabled={syncStatus === 'loading' || syncStatus === 'saving'}
+                  onClick={() => void syncWithCloud()}
+                  className={`inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg border-2 font-sans text-[9px] sm:text-[10px] font-black transition-colors ${
+                    syncStatus === 'loading' || syncStatus === 'saving'
+                      ? 'border-stone-500 bg-stone-600 text-stone-300 cursor-wait'
+                      : 'border-[#F4D03F] bg-[#4E342E] text-[#F4D03F] hover:bg-[#6D4C41] cursor-pointer'
+                  }`}
+                  title="학교·집·핸드폰 등 다른 기기와 진행 맞추기 (같은 학교·이름·4자리 비번)"
+                >
+                  <RefreshCw
+                    className={`w-3 h-3 shrink-0 ${syncStatus === 'loading' || syncStatus === 'saving' ? 'animate-spin' : ''}`}
+                    aria-hidden
+                  />
+                  <span className="whitespace-nowrap hidden sm:inline">
+                    {syncStatus === 'loading' || syncStatus === 'saving'
+                      ? '동기화 중…'
+                      : '다른 기기와 동기화'}
+                  </span>
+                  <span className="whitespace-nowrap sm:hidden">
+                    {syncStatus === 'loading' || syncStatus === 'saving' ? '…' : '동기화'}
+                  </span>
+                </button>
+              </div>
             )}
 
             <a
