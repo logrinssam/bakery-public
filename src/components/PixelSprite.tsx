@@ -453,7 +453,7 @@ export const PixelSprite: React.FC<PixelSpriteProps> = ({
         style={{ width: size, height: size }}
       >
         <img
-          src={assetUrl(`/images/equipments/equipment_${index + 1}.png`)}
+          src={assetUrl(`/images/equipments/equipment_${index}.png`)}
           alt={`Equipment ID ${index}`}
           className={`object-contain ${
             frameless 
