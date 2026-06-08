@@ -4,7 +4,7 @@ const TZ = 'Asia/Seoul';
 const MS_HOUR = 60 * 60 * 1000;
 
 /** KST — ranking slot alignment & interval growth start */
-const RANKING_ANCHOR_KST = '2026-05-22T00:00:00+09:00';
+const RANKING_ANCHOR_KST = '2026-06-02T00:00:00+09:00';
 
 /** Starts at 1h; +1h every 7 days; capped */
 const BASE_INTERVAL_HOURS = 1;
