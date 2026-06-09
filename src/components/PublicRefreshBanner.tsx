@@ -61,8 +61,8 @@ export function PublicRefreshBanner() {
                 </>
               ) : (
                 <>
-                  <span className="text-[#F4D03F]">클라우드 저장이 켜졌어요.</span> 새로고침 후{' '}
-                  <b>학교·이름·PIN 저장</b>을 꼭 해 주세요. (50단계면 명예의 전당 등록도!)
+                  <span className="text-[#F4D03F]">클라우드 저장이 켜졌어요.</span> 새로고침 후
+                  플레이하면 <b>단계 클리어 시 자동 저장</b>됩니다.
                 </>
               )}
               <span className="block mt-0.5 text-[10px] sm:text-[11px] font-semibold text-white/90">
