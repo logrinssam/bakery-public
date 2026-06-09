@@ -6,6 +6,7 @@ import {
   incrementReloadAttempts,
   shouldShowUpdatePrompt,
 } from '../lib/updateAck';
+import { isGithubPagesPublic } from '../lib/isGithubPages';
 
 declare const __APP_BUILD_ID__: string;
 
@@ -88,6 +89,7 @@ export function AppUpdateBanner() {
     };
   }, [checkForUpdate]);
 
+  if (isGithubPagesPublic()) return null;
   if (!updateReady) return null;
 
   return (

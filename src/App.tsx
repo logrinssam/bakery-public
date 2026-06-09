@@ -31,6 +31,8 @@ import { ensureAnonSignedIn } from './services/firebaseAnon';
 import { clampStatsForCloudSave, loadPinSave, savePinStats } from './services/firebasePinSave';
 import { sha256Hex } from './lib/cryptoHash';
 import { isFirebaseConfigured } from './lib/firebase';
+import { AppUpdateBanner } from './components/AppUpdateBanner';
+import { PublicRefreshBanner } from './components/PublicRefreshBanner';
 import {
   describeSyncProgressChange,
   mergePlayerStatsForSync,
@@ -868,6 +870,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen min-h-[100dvh] overflow-x-hidden bg-[#FDF6E3] flex flex-col items-center justify-between font-sans selection:bg-brand-pink/30 scrollbar-thin">
+      <PublicRefreshBanner />
+      <AppUpdateBanner />
       {progressRecovery && (
         <ProgressRecoveryNotice
           info={progressRecovery}
